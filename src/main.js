@@ -4343,6 +4343,9 @@ function updateSpawnSelectionCopy() {
 }
 
 function beginSpawnSelection(reason = 'initial') {
+  // ESC ile açılan kontrol yardımının görünürlük durumu takım değişiminden
+  // sonra HUD üzerinde kalmamalı; doğuş haritası her zaman etkileşimli olmalı.
+  setControlHelpExpanded(false);
   state.spawnSelecting = true;
   state.spawnSelectionReason = reason;
   state.selectedSpawnFortIndex = -1;
@@ -4999,6 +5002,7 @@ function startGame(team) {
 
 function returnToTeamSelection() {
   savePlayerStats();
+  setControlHelpExpanded(false);
   state.started = false;
   state.team = null;
   state.mouseLeft = false;

@@ -379,6 +379,7 @@ h1 em {
 }
 #hud.controls-open { z-index: 40; }
 #hud.controls-open > *:not(#controls-mini) { visibility: hidden; }
+#hud.controls-open > #big-map.spawn-selection { visibility: visible; }
 
 #top-bar {
   position: absolute;

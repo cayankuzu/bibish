@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#11110f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="description" content="Bibish — Redcoats esintili, takım tabanlı absürt açık alan savaşı." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Bibish — Açık Alan Savaşı</title>
+  </head>
+  <body>
+    <section id="loading-screen" aria-live="polite" aria-busy="true">
+      <div class="loading-card">
+        <span class="loading-kicker" data-i18n="loading.kicker">BIBISH SAHAYI HAZIRLIYOR</span>
+        <h1>BIBISH</h1>
+        <p id="loading-operation" data-i18n="loading.start">Oyun çekirdeği başlatılıyor…</p>
+        <div class="loading-track"><i id="loading-fill"></i></div>
+        <div class="loading-meta"><span id="loading-percent">0%</span><span data-i18n="loading.cache">YEREL ÖNBELLEK · WEBGL2</span></div>
+      </div>
+    </section>
+
+    <section id="mobile-block" class="hidden" aria-live="polite">
+      <div class="mobile-block-card">
+        <span class="desktop-icon">▣</span>
+        <p class="kicker" data-i18n="mobile.kicker">MASAÜSTÜ GEREKLİ</p>
+        <h1 data-i18n="mobile.title">BU SAVAŞ CEBE SIĞMAZ</h1>
+        <p data-i18n="mobile.body">Bu oyun mobil cihazlarda çalışmaz. Lütfen bilgisayarda bir web tarayıcısından giriniz.</p>
+      </div>
+    </section>
+
+    <div id="game"></div>
+
+    <div id="hud" class="hidden">
+      <div id="top-bar">
+        <div class="brand-small">BIBISH</div>
+        <div id="fort-strip" aria-label="Karakol durumları">
+          <span class="fort red">K1</span>
+          <span class="fort red">K2</span>
+          <span class="fort red">K3</span>
+          <span class="fort red">K4</span>
+          <span class="fort red">K5</span>
+          <span class="frontline" data-i18n="hud.front">CEPHE</span>
+          <span class="fort blue">M1</span>
+          <span class="fort blue">M2</span>
+          <span class="fort blue">M3</span>
+          <span class="fort blue">M4</span>
+          <span class="fort blue">M5</span>
+        </div>
+      </div>
+
+      <div id="location-card">
+        <span class="eyebrow" data-i18n="hud.coordinates">HARİTA KOORDİNATLARI</span>
+        <strong id="location-name">X 000 · Z 000</strong>
+        <span id="location-distance">Y 000 · KUZEY</span>
+      </div>
+
+      <aside id="battle-score" aria-expanded="true">
+        <div class="score-title" data-i18n="hud.leaderboard">LİDER TABLOSU</div>
+        <div id="leader-team-counts"><b class="red"><i data-i18n="team.redLetter">K</i><span id="leader-red-count">0</span></b><b class="blue"><i data-i18n="team.blueLetter">M</i><span id="leader-blue-count">0</span></b></div>
+        <div class="score-row red"><b><i data-i18n="team.redShort">KIRMIZI</i> <small id="red-player-count">5 kişi</small></b><span id="red-score">0.0%</span></div>
+        <div class="score-row blue"><b><i data-i18n="team.blueShort">MAVİ</i> <small id="blue-player-count">5 kişi</small></b><span id="blue-score">0.0%</span></div>
+        <div class="score-bar"><i id="red-score-fill"></i><i id="blue-score-fill"></i></div>
+        <div class="player-record">
+          <span><i data-i18n="hud.score">PUAN</i><strong id="player-score">0</strong></span>
+          <span><i data-i18n="hud.time">SÜRE</i><strong id="player-time">00:00:00</strong></span>
+          <span><i data-i18n="hud.kills">KILL</i><strong id="player-kills">0</strong></span>
+          <span><i data-i18n="hud.deaths">ÖLÜM</i><strong id="player-deaths">0</strong></span>
+        </div>
+        <div id="leaderboard-head" aria-hidden="true">
+          <i>#</i><b data-i18n="hud.player">OYUNCU</b><span data-i18n="hud.score">PUAN</span><span data-i18n="hud.time">SÜRE</span><span data-i18n="hud.kills">KILL</span><span data-i18n="hud.deaths">ÖLÜM</span>
+        </div>
+        <div id="leaderboard"><span><b>—</b><em>0</em></span></div>
+        <div id="kill-feed-block">
+          <small data-i18n="hud.combatFlow">SAVAŞ AKIŞI</small>
+          <div id="kill-feed" aria-live="polite"></div>
+        </div>
+        <small id="map-seed-label">BIBISH ADASI</small>
+      </aside>
+
+      <div id="crosshair" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div id="scope-overlay" class="hidden" aria-hidden="true"><i></i><b></b><span id="scope-zoom-label">2.4×</span><span class="scope-wheel-hint" data-i18n="scope.wheel">TEKER · ZOOM</span></div>
+      <div id="damage-indicator" aria-hidden="true">
+        <span class="damage-ring"></span>
+        <span id="damage-direction"><i></i></span>
+      </div>
+      <div id="npc-label-layer" aria-hidden="true"></div>
+      <div id="battle-events" aria-live="polite"></div>
+
+      <div id="interaction-hint"></div>
+
+      <div id="minimap-cluster">
+        <div id="map-control-widget">
+          <span data-i18n="hud.mapControl">HARİTA<br />KONTROL</span>
+          <strong id="map-control-value">0%</strong>
+        </div>
+        <div id="minimap-frame">
+          <canvas id="minimap" width="256" height="256" aria-label="Savaş alanı mini haritası"></canvas>
+          <span class="minimap-key">M</span>
+        </div>
+        <div id="paint-percentages"><b class="red">K %0.0</b><b class="blue">M %0.0</b></div>
+      </div>
+
+      <div id="big-map" class="hidden">
+        <div class="big-map-header">
+          <div class="big-map-heading">
+            <b id="big-map-title" data-i18n="hud.fieldMap">SAHA HARİTASI</b>
+            <small id="spawn-map-instruction" class="hidden"></small>
+          </div>
+          <span id="big-map-seed">—</span><kbd>M</kbd>
+        </div>
+        <canvas id="big-map-canvas" width="768" height="768"></canvas>
+        <div id="spawn-map-status" class="hidden" aria-live="polite"></div>
+        <div class="big-map-legend"><span class="red" data-i18n="hud.redPaint">● Kırmızı boya</span><span class="blue" data-i18n="hud.bluePaint">● Mavi boya</span><span data-i18n="hud.position">▲ Konumun</span></div>
+      </div>
+
+      <div id="weapon-panel" class="two-modes">
+        <div class="weapon active" data-weapon="0">
+          <kbd>1</kbd><span class="weapon-icon">⌖</span><span data-i18n="mode.combat">SAVAŞ</span>
+          <span class="weapon-state">HAZIR</span><div class="weapon-resource"><i></i></div>
+        </div>
+        <div class="weapon" data-weapon="1">
+          <kbd>2</kbd><span class="weapon-icon">≋</span><span data-i18n="mode.paint">BOYAMA</span>
+          <span class="weapon-state">ÇİŞ</span><div class="weapon-resource"><i></i></div>
+        </div>
+      </div>
+
+      <div id="vitals-wrap">
+        <div id="shield-status"><span data-i18n="hud.shield">KALKAN · E</span><strong id="shield-state" data-i18n="shield.lowered">HAZIR</strong></div>
+        <div id="stamina-wrap">
+          <div class="meter-label"><span data-i18n="hud.stamina">KOŞU</span><span id="stamina-value">100</span></div>
+          <div class="meter"><div id="stamina-fill"></div></div>
+        </div>
+        <div id="health-wrap">
+          <div class="meter-label"><span data-i18n="hud.health">CAN</span><span id="health-value">100</span></div>
+          <div class="meter"><div id="health-fill"></div></div>
+        </div>
+      </div>
+
+      <div id="controls-mini">
+        <strong class="controls-title" data-i18n="controls.title">KONTROLLER</strong>
+        <span data-i18n="controls.move">WASD Hareket · SHIFT Koş</span>
+        <span data-i18n="controls.stance">C Çömel · V Sürün · SPACE Zıpla / kalk</span>
+        <span data-i18n="controls.mode">1 / 2 Savaş / Boya</span>
+        <span class="control-extra" data-i18n="controls.scroll">SCROLL Silah / boya türü · Dürbün zoom</span>
+        <span class="control-extra" data-i18n="controls.quick">Q Hızlı seçim değiştir</span>
+        <span class="control-extra" data-i18n="controls.camera">Ç Kamera · YÖN TUŞLARI Kamerayı taşı</span>
+        <span class="control-extra" data-i18n="controls.shield">E Kalkanı kaldır / indir</span>
+        <span class="control-extra" data-i18n="controls.mouse">SAĞ TIK Nişan · SOL TIK Ateş / boya</span>
+        <span class="control-extra" data-i18n="controls.map">M Harita · K Lider tablosu</span>
+        <span class="control-extra" data-i18n="controls.escape">ESC Duraklat / tüm kontroller</span>
+        <span class="controls-more" data-i18n="controls.more">ESC · TÜM TUŞLAR</span>
+      </div>
+
+      <div id="performance-stats">FPS — · ÇAĞRI — · OTOMATİK</div>
+    </div>
+
+    <main id="team-screen" class="overlay">
+      <nav id="language-switch" aria-label="Language"><button type="button" data-language="tr">TR</button><button type="button" data-language="en">EN</button></nav>
+      <section class="hero-card">
+        <div class="prototype-pill" data-i18n="menu.prototype">İLK OYNANABİLİR PROTOTİP</div>
+        <h1>BIBISH</h1>
+        <p class="lead" data-i18n="menu.lead">Sabit Bibish Adası'ndaki tepeler, ormanlar ve on karakol için savaş. Düşmanı vur, kaleleri çoğunlukla ele geçir ve toprağı takımının rengine boya.</p>
+
+        <div id="quality-banner" class="quality-banner">
+          <span class="quality-dot"></span>
+          <div>
+            <b data-i18n="menu.autoGraphics">GRAFİKLER OTOMATİK AYARLANDI</b>
+            <p><span id="detected-quality">Orta</span> <span data-i18n="menu.autoGraphicsBody">profili cihazın için seçildi. Oyun yük altında çözünürlüğü kendisi dengeler.</span></p>
+          </div>
+          <button id="banner-settings-button" data-i18n="common.settings">AYARLAR</button>
+        </div>
+
+        <div class="identity-grid">
+          <label class="player-name-field" for="player-name">
+            <span data-i18n="menu.playerName">OYUNCU ADI</span>
+            <input id="player-name" maxlength="18" autocomplete="nickname" data-i18n-placeholder="menu.namePlaceholder" placeholder="Adını yaz" value="Bibishçi" />
+            <small id="player-name-counter" aria-live="polite">8 / 18</small>
+          </label>
+          <label class="country-field">
+            <span data-i18n="menu.country">ÜLKE BAYRAĞI</span>
+            <span id="country-picker" class="country-picker">
+              <button id="country-trigger" class="country-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="country-preview" class="country-flag" aria-hidden="true"></span>
+                <span id="country-selected-label">TR Türkiye</span>
+                <span class="country-chevron" aria-hidden="true">⌄</span>
+              </button>
+              <span id="country-menu" class="country-menu hidden">
+                <input id="country-search" type="search" autocomplete="off" data-i18n-placeholder="menu.countrySearch" placeholder="Ülke ara" />
+                <span id="country-options" class="country-options" role="listbox" aria-label="Ülke bayrağı"></span>
+              </span>
+              <select id="country-select" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
+            </span>
+          </label>
+        </div>
+
+        <div class="team-title" data-i18n="menu.chooseTeam">TAKIMINI SEÇ</div>
+        <div class="team-grid">
+          <button id="choose-red" class="team-button red-team selected" type="button">
+            <span class="team-number">01</span>
+            <span class="figure-mark" aria-hidden="true"><i></i></span>
+            <span class="team-copy"><b data-i18n="team.red">KIRMIZI ORDU</b><small><span id="menu-red-count">5</span> <i data-i18n="menu.randomFort">kişi · rastgele karakol</i></small></span>
+            <span class="arrow">→</span>
+          </button>
+          <button id="choose-blue" class="team-button blue-team" type="button">
+            <span class="team-number">02</span>
+            <span class="figure-mark" aria-hidden="true"><i></i></span>
+            <span class="team-copy"><b data-i18n="team.blue">MAVİ ORDU</b><small><span id="menu-blue-count">5</span> <i data-i18n="menu.randomFort">kişi · rastgele karakol</i></small></span>
+            <span class="arrow">→</span>
+          </button>
+        </div>
+
+        <button id="join-game-button" class="join-game-button" type="button" data-i18n="menu.join">OYUNA GİR</button>
+
+        <div class="saved-stats-row">
+          <span data-i18n="menu.savedCareer">KAYITLI KARİYER</span>
+          <strong id="saved-stats">00:00:00 · 0 PUAN · 0 KILL · 0 ÖLÜM</strong>
+          <button id="reset-stats-button" type="button" data-i18n="menu.resetScore">SKORUMU SIFIRLA</button>
+        </div>
+
+        <button id="team-settings-button" class="visually-hidden" tabindex="-1" aria-hidden="true">OYUN AYARLARI</button>
+      </section>
+    </main>
+
+    <section id="pause-screen" class="overlay hidden">
+      <div class="pause-card">
+        <p class="kicker" data-i18n="pause.kicker">SAVAŞ BEKLİYOR</p>
+        <h2 data-i18n="pause.title">DURAKLATILDI</h2>
+        <p data-i18n="pause.body">Fareyi tekrar oyuna kilitlemek için devam et.</p>
+        <button id="resume-button" class="primary-button" data-i18n="pause.resume">DEVAM ET</button>
+        <button id="pause-settings-button" class="ghost-button" data-i18n="settings.title">OYUN AYARLARI</button>
+        <button id="change-team-button" class="ghost-button" data-i18n="pause.changeTeam">TAKIM DEĞİŞTİR</button>
+      </div>
+    </section>
+
+    <section id="settings-screen" class="overlay hidden">
+      <div class="settings-card">
+        <div class="settings-heading">
+          <div>
+            <p class="kicker" data-i18n="settings.kicker">GÖRÜNTÜ, SES VE PERFORMANS</p>
+            <h2 data-i18n="settings.title">OYUN AYARLARI</h2>
+          </div>
+          <span id="settings-device-summary" data-i18n="settings.detecting">Cihaz ölçülüyor…</span>
+        </div>
+
+        <label class="setting-row" for="quality-select">
+          <span><b data-i18n="settings.quality">Kalite profili</b><small data-i18n="settings.qualityHelp">Otomatik mod cihazı ve gerçek FPS değerini izler.</small></span>
+          <select id="quality-select">
+            <option value="auto" data-i18n="quality.auto">Otomatik — Önerilen</option>
+            <option value="performance" data-i18n="quality.low">Düşük</option>
+            <option value="balanced" data-i18n="quality.medium">Orta</option>
+            <option value="high" data-i18n="quality.high">Yüksek</option>
+            <option value="ultra" data-i18n="quality.ultra">Ultra</option>
+          </select>
+        </label>
+
+        <label class="setting-row" for="dynamic-resolution-toggle">
+          <span><b data-i18n="settings.dynamic">Dinamik çözünürlük</b><small data-i18n="settings.dynamicHelp">Yoğun sahnelerde FPS'i korumak için çözünürlüğü anlık dengeler.</small></span>
+          <input id="dynamic-resolution-toggle" type="checkbox" checked />
+        </label>
+
+        <label class="setting-row" for="stats-toggle">
+          <span><b data-i18n="settings.performance">Performans göstergesi</b><small data-i18n="settings.performanceHelp">FPS, çizim çağrısı ve aktif kaliteyi gösterir.</small></span>
+          <input id="stats-toggle" type="checkbox" checked />
+        </label>
+
+        <label class="setting-row" for="volume-range">
+          <span><b data-i18n="settings.volume">Ana ses seviyesi</b><small data-i18n="settings.volumeHelp">Yön, mesafe ve yakınlık bilgisi kulaklık ve stereo hoparlörler için korunur.</small></span>
+          <span class="volume-control">
+            <input id="volume-range" type="range" min="0" max="100" step="1" value="50" />
+            <output id="volume-value" for="volume-range">50%</output>
+          </span>
+        </label>
+
+        <div class="settings-note">
+          <b data-i18n="settings.priority">AAA hissi için öncelik sırası</b>
+          <p data-i18n="settings.priorityHelp">Önce kontrol tepkisi ve kare hızı korunur; cihaz zorlanırsa efekt yoğunluğu, gölge ve iç çözünürlük otomatik azaltılır.</p>
+        </div>
+
+        <div class="settings-actions">
+          <button id="apply-settings-button" class="primary-button" data-i18n="common.apply">UYGULA</button>
+          <button id="close-settings-button" class="ghost-button" data-i18n="common.back">GERİ DÖN</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="end-screen" class="overlay hidden">
+      <div class="pause-card">
+        <p class="kicker" data-i18n="end.kicker">BIBISH SAVAŞI TAMAMLANDI</p>
+        <h2 id="winner-title">—</h2>
+        <p id="winner-reason">—</p>
+        <button id="restart-button" class="primary-button" data-i18n="end.restart">YENİDEN BAŞLA</button>
+      </div>
+    </section>
+
+    <section id="reset-confirmation" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reset-confirmation-title">
+      <div class="confirm-card">
+        <p class="kicker" data-i18n="menu.savedCareer">KAYITLI KARİYER</p>
+        <h2 id="reset-confirmation-title" data-i18n="reset.title">SKORLAR SIFIRLANSIN MI?</h2>
+        <p data-i18n="reset.body">Süre, puan, kill ve ölüm sayın kalıcı olarak sıfırlanacak.</p>
+        <div class="confirm-actions">
+          <button id="confirm-reset-stats" class="danger-button" type="button" data-i18n="reset.confirm">EVET, SIFIRLA</button>
+          <button id="cancel-reset-stats" class="ghost-button" type="button" data-i18n="common.cancel">VAZGEÇ</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <footer id="app-footer"><span>© 2026 BIBISH</span><span id="powered-by">MeMoDe tarafından</span><span>v0.3.9</span></footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+verification-*.png
+.vercel/
+.codex-*.png
+.env
+.env.*
+!.env.example

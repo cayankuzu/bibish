@@ -60,6 +60,13 @@ async function openBrowser() {
 try {
   await waitForJson(`${baseUrl}/__bibish/metrics`, (value) => value.ok);
   const firstPage = await openBrowser();
+  await firstPage.locator('#player-name').fill('KaliciOyuncu');
+  await firstPage.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
+  await firstPage.waitForFunction(() => Boolean(globalThis.__bibishDebug?.joinLoadTest), null, { timeout: 120000 });
+  const persistedPlayerName = await firstPage.evaluate(() => ({
+    input: document.querySelector('#player-name')?.value,
+    stored: localStorage.getItem('bibish-player-name-v1'),
+  }));
   await firstPage.evaluate(() => globalThis.__bibishDebug.joinLoadTest('red', 1));
   await firstPage.waitForFunction(() => globalThis.__bibishDebug.getNetworkMetrics()?.connected === true, null, { timeout: 30000 });
   await waitForJson(`${baseUrl}/__bibish/metrics`, (value) => value.players === 1 && value.activeDevices === 1);
@@ -76,11 +83,14 @@ try {
   const result = {
     passed: server.players === 1
       && server.activeDevices === 1
+      && persistedPlayerName.input === 'KaliciOyuncu'
+      && persistedPlayerName.stored === 'KaliciOyuncu'
       && first.connected === true
       && second.network.connected === false
       && second.blocked === true
       && first.deviceKey === second.network.deviceKey,
     server: { players: server.players, activeDevices: server.activeDevices, totalConnections: server.totalConnections },
+    persistedPlayerName,
     first: { connected: first.connected, deviceKey: first.deviceKey },
     second: { connected: second.network.connected, deviceKey: second.network.deviceKey, blocked: second.blocked },
   };

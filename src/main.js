@@ -17,6 +17,7 @@ const LANGUAGE_KEY = 'bibish-language-v1';
 const COUNTRY_KEY = 'bibish-country-v1';
 const AUDIO_SETTINGS_KEY = 'bibish-audio-volume-v1';
 const DEFAULT_AUDIO_VOLUME_PERCENT = 50;
+const PLAYER_NAME_KEY = 'bibish-player-name-v1';
 const PLAYER_NAME_MAX_LENGTH = 18;
 let currentLanguage = localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'tr';
 const I18N = {
@@ -156,6 +157,21 @@ function enforcePlayerNameLimit() {
   if (input && characters.length > PLAYER_NAME_MAX_LENGTH) input.value = characters.slice(0, PLAYER_NAME_MAX_LENGTH).join('');
   if (counter) counter.textContent = `${Math.min(characters.length, PLAYER_NAME_MAX_LENGTH)} / ${PLAYER_NAME_MAX_LENGTH}`;
   return input?.value || '';
+}
+
+function sanitizePlayerName(value) {
+  return Array.from(String(value || '').trim()).slice(0, PLAYER_NAME_MAX_LENGTH).join('');
+}
+
+function loadSavedPlayerName() {
+  return sanitizePlayerName(localStorage.getItem(PLAYER_NAME_KEY));
+}
+
+function savePlayerName(value) {
+  const safeName = sanitizePlayerName(value);
+  if (safeName) localStorage.setItem(PLAYER_NAME_KEY, safeName);
+  else localStorage.removeItem(PLAYER_NAME_KEY);
+  return safeName;
 }
 
 const MOBILE_BLOCKED = isMobileDevice();
@@ -546,6 +562,8 @@ const killFeed = document.querySelector('#kill-feed');
 const battleEvents = document.querySelector('#battle-events');
 const playerNameInput = document.querySelector('#player-name');
 const playerNameCounter = document.querySelector('#player-name-counter');
+const savedPlayerName = loadSavedPlayerName();
+if (savedPlayerName) playerNameInput.value = savedPlayerName;
 const countrySelect = document.querySelector('#country-select');
 const countryPreview = document.querySelector('#country-preview');
 const countryPicker = document.querySelector('#country-picker');
@@ -901,7 +919,7 @@ function applyLanguage(language) {
   WASTE_NAMES.pee = t('waste.pee');
   WASTE_NAMES.vomit = t('waste.vomit');
   WASTE_NAMES.poop = t('waste.poop');
-  if (playerNameInput.value === 'Bibishçi' || playerNameInput.value === 'BibishPlayer') playerNameInput.value = currentLanguage === 'tr' ? 'Bibishçi' : 'BibishPlayer';
+  if (!loadSavedPlayerName() && (playerNameInput.value === 'Bibishçi' || playerNameInput.value === 'BibishPlayer')) playerNameInput.value = currentLanguage === 'tr' ? 'Bibishçi' : 'BibishPlayer';
   enforcePlayerNameLimit();
   if (!state.started) state.playerName = playerNameInput.value;
   applyStaticTranslations();
@@ -921,7 +939,7 @@ languageButtons.forEach((button) => button.addEventListener('click', () => apply
 countrySelect.addEventListener('change', () => {
   setCountry(countrySelect.value);
 });
-playerNameInput.addEventListener('input', enforcePlayerNameLimit);
+playerNameInput.addEventListener('input', () => savePlayerName(enforcePlayerNameLimit()));
 enforcePlayerNameLimit();
 countryTrigger.addEventListener('click', () => {
   const opening = countryMenu.classList.contains('hidden');
@@ -5211,7 +5229,10 @@ function applyPlayerTeam(team) {
 
 function startGame(team) {
   state.team = team;
-  state.playerName = enforcePlayerNameLimit().trim() || (currentLanguage === 'tr' ? 'Bibishçi' : 'BibishPlayer');
+  state.playerName = sanitizePlayerName(enforcePlayerNameLimit()) || (currentLanguage === 'tr' ? 'Bibishçi' : 'BibishPlayer');
+  playerNameInput.value = state.playerName;
+  savePlayerName(state.playerName);
+  enforcePlayerNameLimit();
   state.started = true;
   state.matchEnded = false;
   state.dead = false;

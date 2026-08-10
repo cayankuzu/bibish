@@ -29,6 +29,15 @@
       </div>
     </section>
 
+    <section id="duplicate-session-block" class="hidden" aria-live="assertive">
+      <div class="mobile-block-card">
+        <span class="desktop-icon">⌁</span>
+        <p class="kicker" data-i18n="session.kicker">TEK OTURUM SINIRI</p>
+        <h1 data-i18n="session.title">BIBISH ZATEN AÇIK</h1>
+        <p data-i18n="session.body">Bu cihazda zaten aktif bir Bibish oturumu var. Önce diğer sekmeyi veya tarayıcıyı kapat.</p>
+      </div>
+    </section>
+
     <div id="game"></div>
 
     <div id="hud" class="hidden">
@@ -164,6 +173,12 @@
         <h1>BIBISH</h1>
         <p class="lead" data-i18n="menu.lead">Sabit Bibish Adası'ndaki tepeler, ormanlar ve on karakol için savaş. Düşmanı vur, kaleleri çoğunlukla ele geçir ve toprağı takımının rengine boya.</p>
 
+        <button id="how-to-play-button" class="how-to-play-button" type="button">
+          <span class="guide-button-icon" aria-hidden="true">?</span>
+          <span><b data-i18n="guide.open">OYUN AMACI VE OYNANIŞ</b><small data-i18n="guide.openHint">AMAÇ · MODLAR · TÜM TUŞLAR</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+
         <div id="quality-banner" class="quality-banner">
           <span class="quality-dot"></span>
           <div>
@@ -286,6 +301,41 @@
       </div>
     </section>
 
+    <section id="how-to-play-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+      <div class="guide-card">
+        <div class="guide-heading">
+          <div>
+            <p class="kicker" data-i18n="guide.kicker">BIBISH SAHA REHBERİ</p>
+            <h2 id="guide-title" data-i18n="guide.title">AMAÇ VE OYNANIŞ</h2>
+          </div>
+          <button id="close-how-to-play-button" class="ghost-button" type="button" data-i18n="common.back">GERİ DÖN</button>
+        </div>
+
+        <div class="guide-objectives">
+          <article class="guide-objective paint"><span>01</span><b data-i18n="guide.paintTitle">TOPRAĞI BOYA</b><p data-i18n="guide.paintBody">2 ile boya moduna geç. Bütün boyanabilir alan dolduğunda savaş biter.</p></article>
+          <article class="guide-objective capture"><span>02</span><b data-i18n="guide.fortTitle">KALELERİ TUT</b><p data-i18n="guide.fortBody">İçeride çoğunluk kurarak kaleyi ele geçir; takımına yeni doğuş noktası aç.</p></article>
+          <article class="guide-objective combat"><span>03</span><b data-i18n="guide.combatTitle">CEPHEYİ TEMİZLE</b><p data-i18n="guide.combatBody">Tüfek veya kılıçla rakibi durdur. İsabet, kill ve boyama puan kazandırır.</p></article>
+        </div>
+
+        <div class="guide-controls">
+          <div><kbd>WASD</kbd><span data-i18n="guide.move">Hareket</span></div>
+          <div><kbd>SHIFT</kbd><span data-i18n="guide.sprint">Koş</span></div>
+          <div><kbd>SPACE</kbd><span data-i18n="guide.jump">Zıpla / ayağa kalk</span></div>
+          <div><kbd>C</kbd><span data-i18n="guide.crouch">Çömel</span></div>
+          <div><kbd>V</kbd><span data-i18n="guide.prone">Sürün</span></div>
+          <div><kbd>1 / 2</kbd><span data-i18n="guide.modes">Savaş / boya modu</span></div>
+          <div><kbd>SCROLL</kbd><span data-i18n="guide.scroll">Silah, boya veya dürbün zoom</span></div>
+          <div><kbd>Q</kbd><span data-i18n="guide.quick">Hızlı ekipman değiştir</span></div>
+          <div><kbd>E</kbd><span data-i18n="guide.shield">Kılıçtayken kalkan</span></div>
+          <div><kbd data-i18n="guide.leftClick">SOL TIK</kbd><span data-i18n="guide.primary">Ateş / boya</span></div>
+          <div><kbd data-i18n="guide.rightClick">SAĞ TIK</kbd><span data-i18n="guide.aim">Nişan / dürbün</span></div>
+          <div><kbd>M / K</kbd><span data-i18n="guide.panels">Harita / lider tablosu</span></div>
+          <div><kbd data-i18n="guide.cameraKeys">Ç + YÖN</kbd><span data-i18n="guide.camera">Serbest kamera</span></div>
+          <div><kbd>ESC</kbd><span data-i18n="guide.pause">Duraklat / tüm tuşlar</span></div>
+        </div>
+      </div>
+    </section>
+
     <section id="end-screen" class="overlay hidden">
       <div class="pause-card">
         <p class="kicker" data-i18n="end.kicker">BIBISH SAVAŞI TAMAMLANDI</p>
@@ -308,7 +358,7 @@
     </section>
 
     <div id="toast" role="status" aria-live="polite"></div>
-    <footer id="app-footer"><span>© 2026 BIBISH</span><span id="powered-by">MeMoDe tarafından</span><span>v0.3.12</span></footer>
+    <footer id="app-footer"><span>© 2026 BIBISH</span><span id="powered-by">MeMoDe tarafından</span><span>v0.4.1</span></footer>
 
     <script type="module" src="/src/main.js"></script>
   </body>

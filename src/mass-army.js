@@ -31,6 +31,7 @@ export class MassArmySystem {
     onPlayerHit = null,
     onKill = null,
     isBlocked = null,
+    networkControlled = false,
     worldHalfWidth = 520,
     worldHalfDepth = 520,
   }) {
@@ -48,6 +49,7 @@ export class MassArmySystem {
     this.onPlayerHit = onPlayerHit;
     this.onKill = onKill;
     this.isBlocked = isBlocked;
+    this.networkControlled = networkControlled;
     this.worldHalfWidth = worldHalfWidth;
     this.worldHalfDepth = worldHalfDepth;
     this.profile = QUALITY[quality] || QUALITY.balanced;
@@ -67,12 +69,15 @@ export class MassArmySystem {
     this.x = new Float32Array(this.count);
     this.y = new Float32Array(this.count);
     this.targetY = new Float32Array(this.count);
+    this.targetX = new Float32Array(this.count);
+    this.targetZ = new Float32Array(this.count);
     this.z = new Float32Array(this.count);
     this.yaw = new Float32Array(this.count);
     this.phase = new Float32Array(this.count);
     this.speed = new Float32Array(this.count);
     this.health = new Float32Array(this.count);
     this.weapon = new Uint8Array(this.count);
+    this.mode = new Uint8Array(this.count);
     this.shieldActive = new Uint8Array(this.count);
     this.kills = new Uint16Array(this.count);
     this.playerDeaths = new Uint16Array(this.count);
@@ -82,9 +87,13 @@ export class MassArmySystem {
     this.actionTime = new Float32Array(this.count);
     this.audioStepBucket = new Int32Array(this.count);
     this.detailLodState = new Uint8Array(this.count);
+    this.remoteConnected = new Uint8Array(this.count);
+    this.remoteStance = new Uint8Array(this.count);
     this.spawnX = new Float32Array(this.count);
     this.names = new Array(this.count);
     this.countryCodes = new Array(this.count);
+    this.remoteIds = new Array(this.count);
+    this.remoteIndexById = new Map();
     this.playerTarget = null;
     this.focus = null;
     this.listenerX = Infinity;
@@ -251,6 +260,16 @@ export class MassArmySystem {
   }
 
   initializeAgents() {
+    if (this.networkControlled) {
+      this.dead.fill(1);
+      for (let index = 0; index < this.count; index += 1) {
+        this.team[index] = index < this.countPerTeam ? 0 : 1;
+        this.health[index] = 100;
+        this.names[index] = '';
+        this.countryCodes[index] = 'TR';
+      }
+      return;
+    }
     const random = seededRandom(0xB1B1500);
     for (let pair = 0; pair < this.countPerTeam; pair += 1) {
       const normalizedLane = ((pair * 73) % this.countPerTeam) / Math.max(1, this.countPerTeam - 1);
@@ -286,6 +305,82 @@ export class MassArmySystem {
   setQuality(quality) {
     this.quality = quality;
     this.profile = QUALITY[quality] || QUALITY.balanced;
+  }
+
+  syncRemotePlayers(players, selfId = null) {
+    if (!this.networkControlled || !Array.isArray(players)) return;
+    const seen = new Set();
+    const allocate = (teamIndex) => {
+      const start = teamIndex === 0 ? 0 : this.countPerTeam;
+      const end = start + this.countPerTeam;
+      for (let index = start; index < end; index += 1) {
+        if (!this.remoteConnected[index]) return index;
+      }
+      return -1;
+    };
+    for (const packed of players) {
+      if (!Array.isArray(packed) || packed[0] === selfId) continue;
+      const id = String(packed[0] || '');
+      if (!id) continue;
+      const teamIndex = packed[2] === 'blue' ? 1 : 0;
+      let index = this.remoteIndexById.get(id);
+      if (index != null && this.team[index] !== teamIndex) {
+        this.remoteConnected[index] = 0;
+        this.dead[index] = 1;
+        this.remoteIds[index] = null;
+        this.remoteIndexById.delete(id);
+        index = null;
+      }
+      if (index == null) {
+        index = allocate(teamIndex);
+        if (index < 0) continue;
+        this.remoteIndexById.set(id, index);
+        this.remoteIds[index] = id;
+        this.team[index] = teamIndex;
+        this.x[index] = Number(packed[4]) || 0;
+        this.y[index] = Number(packed[5]) || this.terrainHeightAt(this.x[index], Number(packed[6]) || 0);
+        this.z[index] = Number(packed[6]) || 0;
+        this.yaw[index] = Number(packed[7]) || 0;
+      }
+      seen.add(id);
+      this.remoteConnected[index] = 1;
+      this.targetX[index] = Number(packed[4]) || 0;
+      this.targetY[index] = Number.isFinite(Number(packed[5])) ? Number(packed[5]) : this.terrainHeightAt(this.targetX[index], Number(packed[6]) || 0);
+      this.targetZ[index] = Number(packed[6]) || 0;
+      this.names[index] = String(packed[1] || 'BibishPlayer').slice(0, 18);
+      this.countryCodes[index] = String(packed[3] || 'TR').slice(0, 2).toUpperCase();
+      this.yaw[index] = Number(packed[7]) || 0;
+      this.remoteStance[index] = packed[9] === 'prone' ? 2 : packed[9] === 'crouch' ? 1 : 0;
+      this.weapon[index] = Number(packed[10]) === 1 ? 1 : 0;
+      this.mode[index] = Number(packed[11]) === 1 ? 1 : 0;
+      this.shieldActive[index] = packed[12] ? 1 : 0;
+      this.health[index] = THREE.MathUtils.clamp(Number(packed[13]) || 0, 0, 100);
+      this.score[index] = Math.max(0, Math.round(Number(packed[14]) || 0));
+      this.kills[index] = Math.max(0, Math.round(Number(packed[15]) || 0));
+      this.playerDeaths[index] = Math.max(0, Math.round(Number(packed[16]) || 0));
+      this.elapsedSeconds[index] = Math.max(0, Number(packed[17]) || 0);
+      this.phase[index] = Number(packed[18]) || 0;
+      const nextAction = THREE.MathUtils.clamp(Math.round(Number(packed[19]) || 0), 0, 8);
+      if (nextAction && nextAction !== this.action[index]) {
+        const actionPosition = new THREE.Vector3(this.x[index], this.y[index] + 1.1, this.z[index]);
+        if (nextAction === 1) {
+          const shotEnd = actionPosition.clone().add(new THREE.Vector3(-Math.sin(this.yaw[index]), 0, -Math.cos(this.yaw[index])).multiplyScalar(95));
+          this.onShot?.({ start: actionPosition, end: shotEnd, team: teamIndex === 0 ? 'red' : 'blue', index });
+        } else if (nextAction === 4) {
+          this.onAction?.({ type: 'sword', position: actionPosition, team: teamIndex === 0 ? 'red' : 'blue', index });
+        }
+      }
+      this.action[index] = nextAction;
+      this.dead[index] = packed[20] ? 1 : 0;
+    }
+    for (const [id, index] of this.remoteIndexById) {
+      if (seen.has(id)) continue;
+      this.remoteIndexById.delete(id);
+      this.remoteIds[index] = null;
+      this.remoteConnected[index] = 0;
+      this.dead[index] = 1;
+      this.detailLodState[index] = 0;
+    }
   }
 
   ensureOpenPosition(index) {
@@ -511,8 +606,9 @@ export class MassArmySystem {
     const detailBudget = force ? this.count : Math.max(18, Math.round(requestedDetailBudget * Math.max(0.35, lodScale)));
     const closeVisibilitySquared = 24 * 24;
     // 997 is coprime with 1,990 and interleaves both armies, avoiding team-biased LOD slots.
-    for (let scanIndex = 0; scanIndex < this.count; scanIndex += 1) {
-      const index = (scanIndex * 997) % this.count;
+      for (let scanIndex = 0; scanIndex < this.count; scanIndex += 1) {
+        const index = (scanIndex * 997) % this.count;
+        if (this.networkControlled && !this.remoteConnected[index]) continue;
       const dx = this.x[index] - cameraPosition.x;
       const dy = this.y[index] + 1.1 - cameraPosition.y;
       const dz = this.z[index] - cameraPosition.z;
@@ -560,12 +656,13 @@ export class MassArmySystem {
       const stride = Math.sin(phase);
       const shooting = this.action[index] === 1;
       const swording = this.action[index] === 4;
+      const wasteAction = this.action[index] >= 5 && this.action[index] <= 7;
       const dead = this.dead[index] === 1;
-      const stanceCycle = Math.sin(index * 3.17 + this.simulationTime * 0.31);
-      const prone = !dead && (!shooting && stanceCycle > 0.955);
-      const crouch = !prone && (shooting || stanceCycle < -0.78);
-      const recoil = shooting ? Math.sin(Math.min(1, this.actionTime[index] / 0.18) * Math.PI) : 0;
-      const swordSwing = swording ? Math.sin(Math.min(1, Math.max(0, 1 - this.actionTime[index] / 0.46)) * Math.PI) : 0;
+        const stanceCycle = Math.sin(index * 3.17 + this.simulationTime * 0.31);
+        const prone = !dead && (this.networkControlled ? this.remoteStance[index] === 2 : (!shooting && stanceCycle > 0.955));
+        const crouch = !prone && (this.networkControlled ? this.remoteStance[index] === 1 : (shooting || stanceCycle < -0.78));
+      const recoil = shooting ? Math.abs(Math.sin(this.simulationTime * 24 + index)) : 0;
+      const swordSwing = swording ? Math.sin(this.simulationTime * 16 + index * 0.37) * 0.5 + 0.5 : 0;
       const yaw = this.yaw[index];
       const baseY = this.y[index];
 
@@ -621,16 +718,17 @@ export class MassArmySystem {
         if (detailed) {
           this.setPart(this.meshes.leftLeg, index, this.x[index], baseY, this.z[index], yaw, -0.15, legY, 0, stride * strideAmount + (crouch ? 0.62 : 0));
           this.setPart(this.meshes.rightLeg, index, this.x[index], baseY, this.z[index], yaw, 0.15, legY, 0, -stride * strideAmount + (crouch ? 0.62 : 0));
-          const armPitch = shooting ? 1.16 : swording ? 0.86 + swordSwing * 0.52 : 0;
-          this.setPart(this.meshes.leftArm, index, this.x[index], baseY, this.z[index], yaw, -0.34, crouch ? 0.94 : 1.12, 0.04, (shooting || swording) ? armPitch : -stride * 0.34, -0.08);
-          this.setPart(this.meshes.rightArm, index, this.x[index], baseY, this.z[index], yaw, 0.34, crouch ? 0.94 : 1.12, 0.04, (shooting || swording) ? armPitch - recoil * 0.18 : stride * 0.34, 0.08);
+          const armPitch = shooting ? 1.16 : swording ? 0.86 + swordSwing * 0.52 : wasteAction ? (this.action[index] === 6 ? 0.58 : 0.24) : 0;
+          this.setPart(this.meshes.leftArm, index, this.x[index], baseY, this.z[index], yaw, -0.34, crouch ? 0.94 : 1.12, 0.04, (shooting || swording || wasteAction) ? armPitch : -stride * 0.34, -0.08);
+          this.setPart(this.meshes.rightArm, index, this.x[index], baseY, this.z[index], yaw, 0.34, crouch ? 0.94 : 1.12, 0.04, (shooting || swording || wasteAction) ? armPitch - recoil * 0.18 : stride * 0.34, 0.08);
           this.setPart(this.meshes.rifle, index, this.x[index], baseY, this.z[index], yaw, 0.14, crouch ? 1.04 : 1.3, 0.4 - recoil * 0.13, shooting ? -0.05 : 0.18, 0.62, 0.62, 0.62);
         } else {
           for (const mesh of [this.meshes.leftLeg, this.meshes.rightLeg, this.meshes.leftArm, this.meshes.rightArm, this.meshes.rifle]) this.hidePart(mesh, index);
         }
       }
 
-      const usesSword = this.weapon[index] === 1;
+      const usesSword = this.mode[index] === 0 && this.weapon[index] === 1;
+      if (this.mode[index] === 1) this.hidePart(this.meshes.rifle, index);
       if (usesSword) {
         this.hidePart(this.meshes.rifle, index);
         if (dead) {
@@ -675,11 +773,39 @@ export class MassArmySystem {
     this.listenerZ = cameraPosition.z;
     this.playerTarget = playerTarget;
     this.focus = focus;
-    this.aiAccumulator = Math.min(0.2, this.aiAccumulator + delta);
-    const aiStep = 1 / this.profile.aiHz;
-    while (this.aiAccumulator >= aiStep) {
-      this.simulate(aiStep);
-      this.aiAccumulator -= aiStep;
+    if (this.networkControlled) {
+      this.simulationTime += delta;
+      const blend = 1 - Math.exp(-delta * 15);
+      for (let index = 0; index < this.count; index += 1) {
+        if (!this.remoteConnected[index]) continue;
+        const previousX = this.x[index];
+        const previousZ = this.z[index];
+        this.x[index] = THREE.MathUtils.lerp(this.x[index], this.targetX[index], blend);
+        this.y[index] = THREE.MathUtils.lerp(this.y[index], this.targetY[index], blend);
+        this.z[index] = THREE.MathUtils.lerp(this.z[index], this.targetZ[index], blend);
+        const stepBucket = Math.floor(this.phase[index] / Math.PI);
+        const moved = Math.hypot(this.x[index] - previousX, this.z[index] - previousZ);
+        if (moved > 0.006 && stepBucket !== this.audioStepBucket[index]) {
+          const listenerDistanceSquared = (this.x[index] - this.listenerX) ** 2 + (this.y[index] - this.listenerY) ** 2 + (this.z[index] - this.listenerZ) ** 2;
+          if (this.remoteStance[index] !== 2 && listenerDistanceSquared <= 68 * 68) {
+            this.onAction?.({
+              type: 'footstep',
+              mode: this.remoteStance[index] === 1 ? 'crouch' : moved > 0.18 ? 'sprint' : 'walk',
+              position: new THREE.Vector3(this.x[index], this.y[index] + 0.08, this.z[index]),
+              team: this.team[index] === 0 ? 'red' : 'blue',
+              index,
+            });
+          }
+        }
+        this.audioStepBucket[index] = stepBucket;
+      }
+    } else {
+      this.aiAccumulator = Math.min(0.2, this.aiAccumulator + delta);
+      const aiStep = 1 / this.profile.aiHz;
+      while (this.aiAccumulator >= aiStep) {
+        this.simulate(aiStep);
+        this.aiAccumulator -= aiStep;
+      }
     }
     this.animationAccumulator += delta;
     const animationStep = 1 / this.profile.animationHz;
@@ -693,7 +819,7 @@ export class MassArmySystem {
     let red = 0;
     let blue = 0;
     for (let index = 0; index < this.count; index += 1) {
-      if (this.dead[index]) continue;
+      if ((this.networkControlled && !this.remoteConnected[index]) || this.dead[index]) continue;
       if (this.team[index] === 0) red += 1;
       else blue += 1;
     }
@@ -705,7 +831,7 @@ export class MassArmySystem {
     let blue = 0;
     const radius = fort.half - 2;
     for (let index = 0; index < this.count; index += 1) {
-      if (this.dead[index]) continue;
+      if ((this.networkControlled && !this.remoteConnected[index]) || this.dead[index]) continue;
       if (Math.abs(this.x[index] - fort.x) <= radius && Math.abs(this.z[index] - fort.z) <= radius) {
         if (this.team[index] === 0) red += 1;
         else blue += 1;
@@ -719,7 +845,7 @@ export class MassArmySystem {
     let blue = 0;
     const radiusSquared = radius * radius;
     for (let index = 0; index < this.count; index += 1) {
-      if (this.dead[index]) continue;
+      if ((this.networkControlled && !this.remoteConnected[index]) || this.dead[index]) continue;
       const deltaX = this.x[index] - x;
       const deltaZ = this.z[index] - z;
       if (deltaX * deltaX + deltaZ * deltaZ > radiusSquared) continue;
@@ -731,14 +857,16 @@ export class MassArmySystem {
 
   forEachMapAgent(callback) {
     for (let index = 0; index < this.count; index += 1) {
-      if (this.dead[index]) continue;
+      if ((this.networkControlled && !this.remoteConnected[index]) || this.dead[index]) continue;
       const shooting = this.action[index] === 1;
       const stanceCycle = Math.sin(index * 3.17 + this.simulationTime * 0.31);
-      const stance = !shooting && stanceCycle > 0.955
-        ? 'prone'
-        : shooting || stanceCycle < -0.78
-          ? 'crouch'
-          : 'stand';
+      const stance = this.networkControlled
+        ? this.remoteStance[index] === 2 ? 'prone' : this.remoteStance[index] === 1 ? 'crouch' : 'stand'
+        : !shooting && stanceCycle > 0.955
+          ? 'prone'
+          : shooting || stanceCycle < -0.78
+            ? 'crouch'
+            : 'stand';
       callback(this.x[index], this.z[index], this.team[index] === 0 ? 'red' : 'blue', index, stance);
     }
   }
@@ -818,6 +946,7 @@ export class MassArmySystem {
     if (index == null || index < 0 || index >= this.count) return null;
     return {
       index,
+      id: this.remoteIds[index] || null,
       name: this.names[index],
       countryCode: this.countryCodes[index],
       team: this.team[index] === 0 ? 'red' : 'blue',
@@ -828,7 +957,15 @@ export class MassArmySystem {
       kills: this.kills[index],
       deaths: this.playerDeaths[index],
       elapsedSeconds: this.elapsedSeconds[index],
+      x: this.x[index],
+      y: this.y[index],
+      z: this.z[index],
     };
+  }
+
+  getAgentInfoById(id) {
+    const index = this.remoteIndexById.get(id);
+    return index == null ? null : this.getAgentInfo(index);
   }
 
   raycastSegment(previous, current, attackerTeam, radiusScale = 1) {
@@ -933,6 +1070,7 @@ export class MassArmySystem {
   getLeaderboardEntries(maximum = 12) {
     const entries = [];
     for (let index = 0; index < this.count; index += 1) {
+      if (this.networkControlled && !this.remoteConnected[index]) continue;
       entries.push({
         name: this.names[index],
         countryCode: this.countryCodes[index],
@@ -951,6 +1089,7 @@ export class MassArmySystem {
   countAheadOf(score, kills = 0, deaths = 0) {
     let ahead = 0;
     for (let index = 0; index < this.count; index += 1) {
+      if (this.networkControlled && !this.remoteConnected[index]) continue;
       if (
         this.score[index] > score ||
         (this.score[index] === score && this.kills[index] > kills) ||
@@ -961,14 +1100,16 @@ export class MassArmySystem {
   }
 
   getMetrics() {
-    const alive = this.getAliveCounts();
-    return {
-      total: this.count,
+      const alive = this.getAliveCounts();
+      const connected = this.networkControlled ? this.remoteConnected.reduce((total, value) => total + value, 0) : this.count;
+      return {
+        total: connected,
       red: alive.red,
       blue: alive.blue,
       shots: this.shots,
       deaths: { red: this.deaths[0], blue: this.deaths[1] },
-      aiHz: this.profile.aiHz,
+        aiHz: this.networkControlled ? 0 : this.profile.aiHz,
+        networkControlled: this.networkControlled,
       animationHz: this.profile.animationHz,
       quality: this.quality,
       drawCalls: Object.keys(this.meshes).length + Object.keys(this.simplifiedMeshes).length,

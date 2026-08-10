@@ -10,6 +10,7 @@ import {
 } from './performance.js';
 import { BallisticPool, BeamPool, GlobPool, PaintPool, PoopPool } from './instanced-effects.js';
 import { MassArmySystem } from './mass-army.js';
+import { MultiplayerClient } from './multiplayer.js';
 import './style.css';
 
 const LANGUAGE_KEY = 'bibish-language-v1';
@@ -21,6 +22,7 @@ const I18N = {
   tr: {
     'loading.kicker': 'BIBISH SAHAYI HAZIRLIYOR', 'loading.start': 'Oyun çekirdeği başlatılıyor…', 'loading.cache': 'YEREL ÖNBELLEK · WEBGL2',
     'mobile.kicker': 'MASAÜSTÜ GEREKLİ', 'mobile.title': 'BU SAVAŞ CEBE SIĞMAZ', 'mobile.body': 'Bu oyun mobil cihazlarda çalışmaz. Lütfen bilgisayarda bir web tarayıcısından giriniz.',
+    'session.kicker': 'TEK OTURUM SINIRI', 'session.title': 'BIBISH ZATEN AÇIK', 'session.body': 'Bu cihazda zaten aktif bir Bibish oturumu var. Önce diğer sekmeyi veya tarayıcıyı kapat.',
     'hud.front': 'CEPHE', 'hud.fortStatus': 'Karakol durumları', 'hud.collapse': 'K · DARALT', 'hud.expand': 'K · AÇ', 'hud.coordinates': 'HARİTA KOORDİNATLARI', 'hud.leaderboard': 'LİDER TABLOSU', 'hud.myStats': 'İSTATİSTİKLERİM', 'hud.combatFlow': 'SAVAŞ AKIŞI', 'hud.player': 'OYUNCU', 'hud.score': 'PUAN', 'hud.time': 'SÜRE', 'hud.kills': 'KILL', 'hud.deaths': 'ÖLÜM',
     'hud.mapControl': 'HARİTA KONTROL', 'hud.fieldMap': 'SAHA HARİTASI', 'hud.redPaint': '● Kırmızı boya', 'hud.bluePaint': '● Mavi boya', 'hud.position': '▲ Konumun', 'hud.health': 'CAN', 'hud.stamina': 'KOŞU', 'hud.shield': 'KALKAN · E',
     'spawn.title': 'DOĞUŞ ALANI SEÇ', 'spawn.initial': 'İmleci haritada gezdir; yalnızca dostların bulunduğu güvenli çemberlere doğabilirsin.', 'spawn.respawn': 'Dost bulunan ve düşman bulunmayan güvenli bir alan seç.', 'spawn.ready': 'İMLECİ HARİTADA GEZDİR · GEÇERLİ TAKIM ALANINA TIKLA', 'spawn.wait': 'DOĞUŞ HAZIRLANIYOR · {seconds} SN', 'spawn.invalid': 'BU ALAN DOĞUŞ İÇİN GÜVENLİ DEĞİL', 'spawn.selectedWait': 'ALAN SEÇİLDİ · {seconds} SN SONRA TEKRAR TIKLA', 'spawn.valid': 'GÜVENLİ TAKIM ALANI · {friends} DOST · DOĞMAK İÇİN TIKLA', 'spawn.noFriends': 'GEÇERSİZ · ÇEMBERİN İÇİNDE DOST BİRLİK YOK', 'spawn.enemies': 'GEÇERSİZ · ÇEMBERİN İÇİNDE {enemies} DÜŞMAN VAR', 'spawn.blocked': 'GEÇERSİZ · ARAZİ DOĞUŞA UYGUN DEĞİL',
@@ -29,6 +31,9 @@ const I18N = {
     'menu.prototype': 'İLK OYNANABİLİR PROTOTİP', 'menu.lead': "Sabit Bibish Adası'ndaki tepeler, ormanlar ve on karakol için savaş. Düşmanı vur, kaleleri çoğunlukla ele geçir ve toprağı takımının rengine boya.",
     'menu.autoGraphics': 'GRAFİKLER OTOMATİK AYARLANDI', 'menu.autoGraphicsBody': 'profili cihazın için seçildi. Oyun yük altında çözünürlüğü kendisi dengeler.', 'menu.playerName': 'OYUNCU ADI', 'menu.namePlaceholder': 'Adını yaz', 'menu.country': 'ÜLKE BAYRAĞI', 'menu.countrySearch': 'Ülke ara…',
     'menu.chooseTeam': 'TAKIMINI SEÇ', 'menu.randomFort': 'kişi · rastgele karakol', 'menu.join': 'OYUNA GİR', 'menu.savedCareer': 'KAYITLI KARİYER', 'menu.resetScore': 'SKORUMU SIFIRLA',
+    'guide.open': 'OYUN AMACI VE OYNANIŞ', 'guide.openHint': 'AMAÇ · MODLAR · TÜM TUŞLAR', 'guide.kicker': 'BIBISH SAHA REHBERİ', 'guide.title': 'AMAÇ VE OYNANIŞ',
+    'guide.paintTitle': 'TOPRAĞI BOYA', 'guide.paintBody': '2 ile boya moduna geç. Bütün boyanabilir alan dolduğunda savaş biter.', 'guide.fortTitle': 'KALELERİ TUT', 'guide.fortBody': 'İçeride çoğunluk kurarak kaleyi ele geçir; takımına yeni doğuş noktası aç.', 'guide.combatTitle': 'CEPHEYİ TEMİZLE', 'guide.combatBody': 'Tüfek veya kılıçla rakibi durdur. İsabet, kill ve boyama puan kazandırır.',
+    'guide.move': 'Hareket', 'guide.sprint': 'Koş', 'guide.jump': 'Zıpla / ayağa kalk', 'guide.crouch': 'Çömel', 'guide.prone': 'Sürün', 'guide.modes': 'Savaş / boya modu', 'guide.scroll': 'Silah, boya veya dürbün zoom', 'guide.quick': 'Hızlı ekipman değiştir', 'guide.shield': 'Kılıçtayken kalkan', 'guide.primary': 'Ateş / boya', 'guide.aim': 'Nişan / dürbün', 'guide.panels': 'Harita / lider tablosu', 'guide.camera': 'Serbest kamera', 'guide.pause': 'Duraklat / tüm tuşlar', 'guide.leftClick': 'SOL TIK', 'guide.rightClick': 'SAĞ TIK', 'guide.cameraKeys': 'Ç + YÖN',
     'team.red': 'KIRMIZI ORDU', 'team.blue': 'MAVİ ORDU', 'team.redShort': 'KIRMIZI', 'team.blueShort': 'MAVİ', 'team.redLetter': 'K', 'team.blueLetter': 'M',
     'common.settings': 'AYARLAR', 'common.apply': 'UYGULA', 'common.back': 'GERİ DÖN', 'common.cancel': 'VAZGEÇ',
     'pause.kicker': 'SAVAŞ BEKLİYOR', 'pause.title': 'DURAKLATILDI', 'pause.body': 'Fareyi tekrar oyuna kilitlemek için devam et.', 'pause.resume': 'DEVAM ET', 'pause.changeTeam': 'TAKIM DEĞİŞTİR',
@@ -45,6 +50,7 @@ const I18N = {
   en: {
     'loading.kicker': 'BIBISH IS PREPARING THE FIELD', 'loading.start': 'Starting the game core…', 'loading.cache': 'LOCAL CACHE · WEBGL2',
     'mobile.kicker': 'DESKTOP REQUIRED', 'mobile.title': 'THIS WAR WILL NOT FIT IN YOUR POCKET', 'mobile.body': 'This game is not available on mobile devices. Please open it in a desktop web browser.',
+    'session.kicker': 'ONE SESSION LIMIT', 'session.title': 'BIBISH IS ALREADY OPEN', 'session.body': 'There is already an active Bibish session on this device. Close the other tab or browser first.',
     'hud.front': 'FRONT', 'hud.fortStatus': 'Fort status', 'hud.collapse': 'K · COLLAPSE', 'hud.expand': 'K · EXPAND', 'hud.coordinates': 'MAP COORDINATES', 'hud.leaderboard': 'LEADERBOARD', 'hud.myStats': 'MY STATS', 'hud.combatFlow': 'COMBAT FLOW', 'hud.player': 'PLAYER', 'hud.score': 'SCORE', 'hud.time': 'TIME', 'hud.kills': 'KILLS', 'hud.deaths': 'DEATHS',
     'hud.mapControl': 'MAP CONTROL', 'hud.fieldMap': 'FIELD MAP', 'hud.redPaint': '● Red paint', 'hud.bluePaint': '● Blue paint', 'hud.position': '▲ Your position', 'hud.health': 'HEALTH', 'hud.stamina': 'STAMINA', 'hud.shield': 'SHIELD · E',
     'spawn.title': 'SELECT A SPAWN AREA', 'spawn.initial': 'Move over the live map; you may spawn only inside safe circles occupied by allies.', 'spawn.respawn': 'Choose a safe area containing allies and no enemies.', 'spawn.ready': 'MOVE OVER THE MAP · CLICK A VALID TEAM AREA', 'spawn.wait': 'PREPARING RESPAWN · {seconds} S', 'spawn.invalid': 'THIS AREA IS NOT SAFE FOR SPAWNING', 'spawn.selectedWait': 'AREA SELECTED · CLICK AGAIN IN {seconds} S', 'spawn.valid': 'SAFE TEAM AREA · {friends} ALLIES · CLICK TO SPAWN', 'spawn.noFriends': 'INVALID · NO ALLIED UNITS INSIDE THE CIRCLE', 'spawn.enemies': 'INVALID · {enemies} ENEMIES INSIDE THE CIRCLE', 'spawn.blocked': 'INVALID · TERRAIN IS NOT SUITABLE FOR SPAWNING',
@@ -53,6 +59,9 @@ const I18N = {
     'menu.prototype': 'FIRST PLAYABLE PROTOTYPE', 'menu.lead': 'Fight across the hills, forests and ten forts of the fixed Bibish Island. Shoot enemies, capture forts by majority and paint the land in your team color.',
     'menu.autoGraphics': 'GRAPHICS OPTIMIZED AUTOMATICALLY', 'menu.autoGraphicsBody': 'profile was selected for your device. The game balances resolution under load.', 'menu.playerName': 'PLAYER NAME', 'menu.namePlaceholder': 'Enter your name', 'menu.country': 'COUNTRY FLAG', 'menu.countrySearch': 'Search country…',
     'menu.chooseTeam': 'CHOOSE YOUR TEAM', 'menu.randomFort': 'players · random fort', 'menu.join': 'ENTER GAME', 'menu.savedCareer': 'SAVED CAREER', 'menu.resetScore': 'RESET MY SCORE',
+    'guide.open': 'OBJECTIVE AND GAMEPLAY', 'guide.openHint': 'GOAL · MODES · ALL CONTROLS', 'guide.kicker': 'BIBISH FIELD GUIDE', 'guide.title': 'OBJECTIVE AND GAMEPLAY',
+    'guide.paintTitle': 'PAINT THE LAND', 'guide.paintBody': 'Press 2 for paint mode. The battle ends when every paintable area is covered.', 'guide.fortTitle': 'HOLD THE FORTS', 'guide.fortBody': 'Outnumber enemies inside a fort to capture it and unlock a team spawn.', 'guide.combatTitle': 'CLEAR THE FRONT', 'guide.combatBody': 'Stop rivals with the rifle or sword. Hits, kills and painting award score.',
+    'guide.move': 'Move', 'guide.sprint': 'Sprint', 'guide.jump': 'Jump / stand up', 'guide.crouch': 'Crouch', 'guide.prone': 'Prone', 'guide.modes': 'Combat / paint mode', 'guide.scroll': 'Weapon, paint or scope zoom', 'guide.quick': 'Quick equipment switch', 'guide.shield': 'Shield while using sword', 'guide.primary': 'Fire / paint', 'guide.aim': 'Aim / scope', 'guide.panels': 'Map / leaderboard', 'guide.camera': 'Free camera', 'guide.pause': 'Pause / all controls', 'guide.leftClick': 'LEFT CLICK', 'guide.rightClick': 'RIGHT CLICK', 'guide.cameraKeys': 'Ç + ARROWS',
     'team.red': 'RED ARMY', 'team.blue': 'BLUE ARMY', 'team.redShort': 'RED', 'team.blueShort': 'BLUE', 'team.redLetter': 'R', 'team.blueLetter': 'B',
     'common.settings': 'SETTINGS', 'common.apply': 'APPLY', 'common.back': 'GO BACK', 'common.cancel': 'CANCEL',
     'pause.kicker': 'THE WAR IS WAITING', 'pause.title': 'PAUSED', 'pause.body': 'Continue to lock the pointer back into the game.', 'pause.resume': 'CONTINUE', 'pause.changeTeam': 'CHANGE TEAM',
@@ -103,6 +112,25 @@ function applyStaticTranslations() {
 
 applyStaticTranslations();
 
+const duplicateSessionBlock = document.querySelector('#duplicate-session-block');
+function blockDuplicateSession() {
+  document.exitPointerLock?.();
+  duplicateSessionBlock?.classList.remove('hidden');
+}
+
+const duplicateTestQuery = new URLSearchParams(window.location.search);
+const bypassLocalTabLock = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  && (duplicateTestQuery.has('localLobbyTest') || duplicateTestQuery.has('loadtest') || duplicateTestQuery.has('stressFullRoster'));
+if (!bypassLocalTabLock && navigator.locks?.request) {
+  navigator.locks.request('bibish-single-active-session-v1', { mode: 'exclusive', ifAvailable: true }, (lock) => {
+    if (!lock) {
+      blockDuplicateSession();
+      return undefined;
+    }
+    return new Promise((release) => window.addEventListener('pagehide', release, { once: true }));
+  }).catch(() => {});
+}
+
 const ISO_COUNTRY_CODES = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW`.split(' ');
 
 function countryFlag(code) {
@@ -111,7 +139,7 @@ function countryFlag(code) {
 
 function flagMarkup(code) {
   const safeCode = ISO_COUNTRY_CODES.includes(String(code).toUpperCase()) ? String(code).toLowerCase() : 'tr';
-  return `<span class="country-flag" style="background-image:url('/flags/${safeCode}.svg')" aria-hidden="true"></span>`;
+  return `<img class="country-flag" src="/flags/${safeCode}.svg" alt="" aria-hidden="true" draggable="false" />`;
 }
 
 function escapeHtml(value) {
@@ -156,7 +184,7 @@ const WORLD = {
 // Sabit seed: Bibish Adası her yüklemede aynı araziyi ve aynı siperleri üretir.
 const MAP_SEED = 0xB1B15A11;
 // NPC savaşçıları görüş ve menzil içindeki karşı takım oyuncusunu hedefleyip yaralayabilir.
-const NPC_PLAYER_COMBAT_ENABLED = true;
+const NPC_PLAYER_COMBAT_ENABLED = false;
 
 function mulberry32(seed) {
   return function random() {
@@ -462,6 +490,7 @@ const locationDistance = document.querySelector('#location-distance');
 const interactionHint = document.querySelector('#interaction-hint');
 const toast = document.querySelector('#toast');
 const settingsScreen = document.querySelector('#settings-screen');
+const howToPlayScreen = document.querySelector('#how-to-play-screen');
 const qualitySelect = document.querySelector('#quality-select');
 const dynamicResolutionToggle = document.querySelector('#dynamic-resolution-toggle');
 const statsToggle = document.querySelector('#stats-toggle');
@@ -607,6 +636,7 @@ const friendlyFigures = new THREE.Group();
 const bots = [];
 const combatTargets = [];
 let massArmy;
+let multiplayer;
 let groundMesh;
 scene.add(friendlyFigures);
 
@@ -1212,8 +1242,8 @@ function updatePerformanceStats({ fps, drawCalls, triangles, pixelRatio, tier })
   runtimeLodScale = THREE.MathUtils.lerp(runtimeLodScale, desiredLodScale, response);
   if (!graphicsPreference.showStats) return;
   performanceStats.textContent = currentLanguage === 'tr'
-    ? `FPS ${fps} · ÇAĞRI ${drawCalls} · NPC 2000 · ${qualityLabel(tier).toUpperCase()} · ${pixelRatio.toFixed(2)}×`
-    : `FPS ${fps} · DRAWS ${drawCalls} · NPC 2000 · ${qualityLabel(tier).toUpperCase()} · ${pixelRatio.toFixed(2)}×`;
+    ? `FPS ${fps} · ÇAĞRI ${drawCalls} · OYUNCU ${multiplayer?.getMetrics().serverPlayerCount || massArmy?.getMetrics().total || 0} · ${qualityLabel(tier).toUpperCase()} · ${pixelRatio.toFixed(2)}×`
+    : `FPS ${fps} · DRAWS ${drawCalls} · PLAYERS ${multiplayer?.getMetrics().serverPlayerCount || massArmy?.getMetrics().total || 0} · ${qualityLabel(tier).toUpperCase()} · ${pixelRatio.toFixed(2)}×`;
 }
 
 function applyQuality(tier, reason = 'manual') {
@@ -1269,6 +1299,16 @@ function closeSettings() {
   if (state.started || settingsReturnScreen === 'pause') pauseScreen.classList.remove('hidden');
   else teamScreen.classList.remove('hidden');
   setControlHelpExpanded(state.started);
+}
+
+function openHowToPlay() {
+  teamScreen.classList.add('hidden');
+  howToPlayScreen.classList.remove('hidden');
+}
+
+function closeHowToPlay() {
+  howToPlayScreen.classList.add('hidden');
+  teamScreen.classList.remove('hidden');
 }
 
 function applySettings() {
@@ -1728,6 +1768,26 @@ const BOT_COUNTRY_CODES = {
   blue: ['GB', 'FR', 'KR', 'CA', 'SE'],
 };
 
+const nameplateFlagImages = new Map();
+function nameplateFlagImage(code, bot) {
+  const safeCode = ISO_COUNTRY_CODES.includes(String(code).toUpperCase()) ? String(code).toLowerCase() : 'tr';
+  let record = nameplateFlagImages.get(safeCode);
+  if (!record) {
+    const image = new Image();
+    record = { image, loaded: false, bots: new Set() };
+    nameplateFlagImages.set(safeCode, record);
+    image.decoding = 'async';
+    image.addEventListener('load', () => {
+      record.loaded = true;
+      for (const waitingBot of record.bots) updateBotNameplate(waitingBot);
+      record.bots.clear();
+    }, { once: true });
+    image.src = `/flags/${safeCode}.svg`;
+  }
+  if (!record.loaded) record.bots.add(bot);
+  return record.loaded ? record.image : null;
+}
+
 function updateBotNameplate(bot) {
   const { canvas, context, texture } = bot.label.userData;
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -1736,10 +1796,15 @@ function updateBotNameplate(bot) {
   context.textBaseline = 'middle';
   context.textAlign = 'left';
   context.fillStyle = '#fff';
-  context.font = '30px "Segoe UI Emoji", sans-serif';
-  context.fillText(countryFlag(bot.countryCode), 14, 27);
+  const flagImage = nameplateFlagImage(bot.countryCode, bot);
+  if (flagImage) context.drawImage(flagImage, 12, 10, 40, 27);
+  else {
+    context.fillStyle = '#e8e3d6';
+    context.fillRect(12, 10, 40, 27);
+  }
+  context.fillStyle = '#fff';
   context.font = '800 22px Arial';
-  context.fillText(bot.name, 58, 27);
+  context.fillText(bot.name, 62, 27);
   context.fillStyle = 'rgba(255,255,255,.18)';
   context.fillRect(18, 38, 220, 12);
   context.fillStyle = bot.team === 'red' ? '#ff315e' : '#28b8ff';
@@ -2697,7 +2762,6 @@ function createWorld() {
   for (const fort of fortLayout) createFort(fort.x, fort.z, fort.team, fort.index);
   createCoverAndScenery();
   mergeStaticWorld();
-  createBattleFigures();
   buildBlockerGrid();
 }
 
@@ -2971,6 +3035,22 @@ function updateMaps() {
   if (now - lastBoardUpdate >= 500) {
     lastBoardUpdate = now;
     updateCareerUI();
+    const serverRankedPlayers = (multiplayer?.serverLeaderboard || [])
+      .filter((entry) => Array.isArray(entry) && entry[0] !== multiplayer?.clientId)
+      .map((entry) => ({
+        id: entry[0],
+        name: String(entry[1] || 'BibishPlayer'),
+        team: entry[2] === 'blue' ? 'blue' : 'red',
+        countryCode: String(entry[3] || 'TR'),
+        score: Math.max(0, Number(entry[4]) || 0),
+        elapsedSeconds: Math.max(0, Number(entry[5]) || 0),
+        kills: Math.max(0, Math.round(Number(entry[6]) || 0)),
+        deaths: Math.max(0, Math.round(Number(entry[7]) || 0)),
+        dead: Boolean(entry[8]),
+      }));
+    const remoteRankedPlayers = serverRankedPlayers.length
+      ? serverRankedPlayers
+      : (massArmy?.getLeaderboardEntries(18) || []);
     const allRankedPlayers = [
       {
         name: state.playerName,
@@ -2992,7 +3072,7 @@ function updateMaps() {
         team: bot.team,
         dead: bot.dead,
       })),
-      ...(massArmy?.getLeaderboardEntries(18) || []),
+      ...remoteRankedPlayers,
     ].sort((a, b) => b.score - a.score || b.kills - a.kills || a.deaths - b.deaths);
     allRankedPlayers.forEach((entry, index) => { entry.rank = index + 1; });
     const selfEntry = allRankedPlayers.find((entry) => entry.self);
@@ -3002,7 +3082,13 @@ function updateMaps() {
         (bot.score === selfEntry.score && bot.kills > selfEntry.kills) ||
         (bot.score === selfEntry.score && bot.kills === selfEntry.kills && bot.deaths < selfEntry.deaths)
       )).length;
-      selfEntry.rank = 1 + detailedBotsAhead + (massArmy?.countAheadOf(selfEntry.score, selfEntry.kills, selfEntry.deaths) || 0);
+      selfEntry.rank = multiplayer?.connected
+        ? 1 + allRankedPlayers.filter((entry) => !entry.self && (
+          entry.score > selfEntry.score ||
+          (entry.score === selfEntry.score && entry.kills > selfEntry.kills) ||
+          (entry.score === selfEntry.score && entry.kills === selfEntry.kills && entry.deaths < selfEntry.deaths)
+        )).length
+        : 1 + detailedBotsAhead + (massArmy?.countAheadOf(selfEntry.score, selfEntry.kills, selfEntry.deaths) || 0);
     }
     const rankedPlayers = allRankedPlayers.slice(0, 7);
     if (selfEntry && !rankedPlayers.includes(selfEntry)) rankedPlayers.push(selfEntry);
@@ -3528,6 +3614,16 @@ function placeWastePaint(point, radius, wasteType, team = state.team, awardScore
   }
   terrainTextureDirty = true;
   paintTerritory(point, effectiveRadius, team, awardScore);
+  if (awardScore && state.started && team === state.team && wasteType !== 'team') {
+    multiplayer?.sendEvent({
+      kind: 'paint',
+      x: point.x,
+      y: point.y,
+      z: point.z,
+      radius,
+      wasteType,
+    });
+  }
 }
 
 function cameraRay(spreadX = 0, spreadY = 0) {
@@ -3969,6 +4065,17 @@ function performSwordSwing() {
   const detailedDistance = hit && playerReachOrigin.distanceTo(hit.point) <= 3.55 ? camera.position.distanceTo(hit.point) : Infinity;
   const massDistance = massHit && playerReachOrigin.distanceTo(massHit.point) <= 3.55 ? camera.position.distanceTo(massHit.point) : Infinity;
   if (massHit && massDistance < detailedDistance) {
+    const remoteTarget = massArmy.getAgentInfo(massHit.massIndex);
+    if (remoteTarget?.id && multiplayer?.sendEvent({
+      kind: 'damage',
+      targetId: remoteTarget.id,
+      weapon: 'sword',
+      zone: massHit.damageZone,
+      distance: massDistance,
+    })) {
+      showToast(localized('KILIÇ DARBESİ GÖNDERİLDİ', 'SWORD STRIKE SENT'));
+      return;
+    }
     const outcome = massArmy.damageAgent(massHit.massIndex, calculateWeaponDamage(massHit.damageZone, massDistance, true), massHit.damageZone);
     state.score += outcome.damage + (outcome.killed ? 100 : 0);
     if (outcome.killed) {
@@ -4160,6 +4267,14 @@ function impactBullet(result) {
   const travelDistance = result.travelDistance || 0;
   const damage = calculateWeaponDamage(zone, travelDistance);
   if (result.massIndex != null) {
+    const remoteTarget = massArmy.getAgentInfo(result.massIndex);
+    if (remoteTarget?.id && multiplayer?.sendEvent({
+      kind: 'damage',
+      targetId: remoteTarget.id,
+      weapon: 'rifle',
+      zone,
+      distance: travelDistance,
+    })) return;
     const outcome = massArmy.damageAgent(result.massIndex, damage, zone);
     state.score += outcome.damage + (outcome.killed ? 100 : 0);
     if (outcome.killed) {
@@ -4219,6 +4334,17 @@ function updateEffects(delta) {
 }
 
 function updateTeamCounts() {
+  if (multiplayer?.connected) {
+    const red = Math.max(0, Math.round(Number(multiplayer.serverTeamCounts?.red) || 0));
+    const blue = Math.max(0, Math.round(Number(multiplayer.serverTeamCounts?.blue) || 0));
+    redPlayerCount.textContent = `${red} ${currentLanguage === 'tr' ? 'kişi' : 'players'}`;
+    bluePlayerCount.textContent = `${blue} ${currentLanguage === 'tr' ? 'kişi' : 'players'}`;
+    leaderRedCount.textContent = red;
+    leaderBlueCount.textContent = blue;
+    menuRedCount.textContent = red;
+    menuBlueCount.textContent = blue;
+    return;
+  }
   let red = bots.filter((bot) => bot.team === 'red' && !bot.dead).length;
   let blue = bots.filter((bot) => bot.team === 'blue' && !bot.dead).length;
   const massCounts = massArmy?.getAliveCounts();
@@ -4391,8 +4517,9 @@ function evaluateSpawnArea(x, z) {
   const enemies = counts[state.team === 'red' ? 'blue' : 'red'] || 0;
   const feetY = floorHeightAt(x, z);
   const insideWorld = Math.abs(x) <= WORLD.halfWidth - 34 && Math.abs(z) <= WORLD.halfDepth - 34;
+  const ownedFort = fortData.some((fort) => fort.team === state.team && Math.abs(x - fort.x) <= fort.half - 2 && Math.abs(z - fort.z) <= fort.half - 2);
   const suitableTerrain = insideWorld && terrainHeightAt(x, z) > -9 && !collidesStaticAt(x, z, PLAYER.radius, feetY, PLAYER.bodyHeight);
-  const reason = !suitableTerrain ? 'spawn.blocked' : enemies > 0 ? 'spawn.enemies' : friends < 1 ? 'spawn.noFriends' : 'spawn.valid';
+  const reason = !suitableTerrain ? 'spawn.blocked' : enemies > 0 ? 'spawn.enemies' : friends < 1 && !ownedFort ? 'spawn.noFriends' : 'spawn.valid';
   return { x, z, counts, valid: reason === 'spawn.valid', reason };
 }
 
@@ -4436,7 +4563,8 @@ function finishSpawnSelection(point = state.spawnSelectedPoint) {
   spawnMapInstruction.classList.add('hidden');
   spawnMapStatus.classList.add('hidden');
   bigMapTitle.textContent = t('hud.fieldMap');
-  renderer.domElement.requestPointerLock?.();
+  const pointerLockRequest = renderer.domElement.requestPointerLock?.();
+  pointerLockRequest?.catch?.(() => {});
   showToast(state.spawnSelectionReason === 'initial'
     ? localized('SEÇTİĞİN KALEDE SAVAŞA KATILDIN', 'DEPLOYED AT THE SELECTED FORT')
     : localized('SEÇTİĞİN KALEDE YENİDEN DOĞDUN', 'RESPAWNED AT THE SELECTED FORT'));
@@ -4516,14 +4644,16 @@ function hasLineOfSightToPlayer(source) {
   return raycaster.intersectObjects(bulletSurfaces, false).length === 0;
 }
 
-function damagePlayer(amount, source = null, attacker = null) {
+function damagePlayer(amount, source = null, attacker = null, weapon = 'rifle', authoritativeHealth = null) {
   if (state.dead || state.matchEnded) return false;
-  if (shieldBlocksSource(source)) {
+  if (authoritativeHealth == null && shieldBlocksSource(source)) {
     registerShieldBlock(source);
     return false;
   }
   showDamageDirection(source);
-  state.health = Math.max(0, state.health - amount);
+  state.health = authoritativeHealth == null
+    ? Math.max(0, state.health - amount)
+    : THREE.MathUtils.clamp(Number(authoritativeHealth) || 0, 0, 100);
   state.lastDamageTime = 0;
   if (state.health <= 0) {
     state.dead = true;
@@ -4538,7 +4668,7 @@ function damagePlayer(amount, source = null, attacker = null) {
       addKillFeed(
         attacker,
         { name: state.playerName, team: state.team, countryCode: state.countryCode },
-        'rifle',
+        weapon,
       );
       showBattleEvent(localized('DÜŞTÜN', 'YOU WERE DOWNED'), localized(`${attacker.name} seni vurdu. 3 saniye içinde yeniden doğacaksın.`, `${attacker.name} eliminated you. You will respawn in 3 seconds.`), attacker.team);
     }
@@ -4794,8 +4924,9 @@ function updateBots(delta) {
   }
 }
 
-function setFortOwner(fort, team) {
+function setFortOwner(fort, team, broadcast = true, notify = true, awardScore = true) {
   const previousTeam = fort.team;
+  if (previousTeam === team) return;
   const fortCode = `${t(fort.originalTeam === 'red' ? 'team.redLetter' : 'team.blueLetter')}${fort.index}`;
   fort.team = team;
   if (state.spawnSelecting && state.selectedSpawnFortIndex === fortData.indexOf(fort) && team !== state.team) {
@@ -4817,7 +4948,9 @@ function setFortOwner(fort, team) {
   // Ele geçirilen kalenin avlusu da yeni sahibin rengine gerçek arazi dokusu üzerinde döner.
   paintFortGround(fort, team);
   fort.name = currentLanguage === 'tr' ? `${team === 'red' ? 'Kırmızı' : 'Mavi'} Karakol ${fort.index}` : `${team === 'red' ? 'Red' : 'Blue'} Fort ${fort.index}`;
-  if (state.team === team) state.score += 250;
+  if (awardScore && state.team === team) state.score += 250;
+  if (broadcast) multiplayer?.sendEvent({ kind: 'fort', fortIndex: fortData.indexOf(fort) });
+  if (!notify) return;
   showToast(`${fort.name.toUpperCase()} ${localized('ELE GEÇİRİLDİ', 'CAPTURED')} · ${team === 'red' ? t('team.redShort') : t('team.blueShort')}`);
   const playerLostFort = state.team === previousTeam && state.team !== team;
   showBattleEvent(
@@ -4830,6 +4963,106 @@ function setFortOwner(fort, team) {
     ),
     team,
   );
+}
+
+let lastNetworkEventId = 0;
+
+function networkEventSource(event) {
+  return Array.isArray(event?.source) && event.source.length >= 3
+    ? new THREE.Vector3(Number(event.source[0]) || 0, Number(event.source[1]) || 0, Number(event.source[2]) || 0)
+    : null;
+}
+
+function handleNetworkGameEvent(event) {
+  if (!event || typeof event !== 'object') return;
+  const eventId = Math.max(0, Math.round(Number(event.eventId) || 0));
+  if (eventId && eventId <= lastNetworkEventId) return;
+  if (eventId) lastNetworkEventId = eventId;
+
+  if (event.kind === 'paint') {
+    if (event.sourceId === multiplayer?.clientId) return;
+    const team = event.team === 'blue' ? 'blue' : 'red';
+    const wasteType = ['pee', 'vomit', 'poop'].includes(event.wasteType) ? event.wasteType : null;
+    if (!wasteType) return;
+    const impactPoint = new THREE.Vector3(Number(event.x) || 0, Number(event.y) || terrainHeightAt(Number(event.x) || 0, Number(event.z) || 0), Number(event.z) || 0);
+    const emitter = massArmy?.getAgentInfoById(event.sourceId);
+    if (emitter) {
+      const startHeight = wasteType === 'vomit' ? 1.68 : wasteType === 'poop' ? 0.72 : 0.78;
+      const start = new THREE.Vector3(emitter.x, emitter.y + startHeight, emitter.z);
+      if (wasteType === 'pee') beamPool.add(start, impactPoint, WASTE_STYLE[team].pee, 0.032, 0.16);
+      else globPool.add(start, impactPoint, WASTE_STYLE[team][wasteType], wasteType === 'vomit' ? 0.2 : 0.24);
+      playActionSound(wasteType, start);
+    }
+    placeWastePaint(
+      impactPoint,
+      THREE.MathUtils.clamp(Number(event.radius) || 0.1, 0.1, 2),
+      wasteType,
+      team,
+      false,
+    );
+    return;
+  }
+
+  if (event.kind === 'fort') {
+    if (event.sourceId === multiplayer?.clientId) return;
+    const fort = fortData[Math.round(Number(event.fortIndex))];
+    const team = event.team === 'blue' ? 'blue' : 'red';
+    if (fort && fort.team !== team) setFortOwner(fort, team, false, true, true);
+    return;
+  }
+
+  if (event.kind === 'blocked') {
+    const source = networkEventSource(event);
+    if (event.targetId === multiplayer?.clientId) registerShieldBlock(source);
+    if (event.sourceId === multiplayer?.clientId) showToast(localized('KALKAN MERMİYİ DURDURDU', 'THE SHIELD BLOCKED THE HIT'));
+    return;
+  }
+
+  if (event.kind !== 'damage') return;
+  const source = networkEventSource(event);
+  const attacker = event.attacker || null;
+  const victim = event.victim || null;
+  const weapon = event.weapon === 'sword' ? 'sword' : 'rifle';
+  if (event.targetId === multiplayer?.clientId) {
+    damagePlayer(Number(event.damage) || 0, source, attacker, weapon, Number(event.health));
+    if (event.targetStats) {
+      state.score = Math.max(0, Number(event.targetStats.score) || 0);
+      state.deaths = Math.max(0, Math.round(Number(event.targetStats.deaths) || 0));
+    }
+    savePlayerStats();
+    return;
+  }
+
+  if (event.sourceId === multiplayer?.clientId) {
+    if (event.attackerStats) {
+      state.score = Math.max(0, Number(event.attackerStats.score) || 0);
+      state.kills = Math.max(0, Math.round(Number(event.attackerStats.kills) || 0));
+    }
+    if (event.killed) {
+      addKillFeed(attacker, victim, weapon);
+      showToast(`${victim?.name || localized('RAKİP', 'RIVAL')} ${localized('DÜŞTÜ', 'DOWN')} · +100`);
+    } else {
+      showToast(`${event.zone === 'head' ? localized('KAFA', 'HEAD') : localized('İSABET', 'HIT')} · -${Math.round(Number(event.damage) || 0)} ${localized('CAN', 'HEALTH')} · ${Math.round(Number(event.distance) || 0)}M`);
+    }
+    savePlayerStats();
+    return;
+  }
+
+  if (event.killed) addKillFeed(attacker, victim, weapon);
+}
+
+function handleNetworkWorldState(message) {
+  if (Array.isArray(message.paint)) {
+    for (const paintEvent of message.paint) handleNetworkGameEvent(paintEvent);
+  }
+  if (Array.isArray(message.forts)) {
+    message.forts.forEach((owner, index) => {
+      const fort = fortData[index];
+      const team = owner === 'blue' ? 'blue' : 'red';
+      if (fort && fort.team !== team) setFortOwner(fort, team, false, false, false);
+    });
+  }
+  lastNetworkEventId = Math.max(lastNetworkEventId, Math.round(Number(message.eventSequence) || 0));
 }
 
 function endMatch(team, reason) {
@@ -4955,6 +5188,22 @@ function updateLocation() {
   locationDistance.textContent = `Y ${Math.round(state.feetY)} · ${direction}`;
 }
 
+function applyPlayerTeam(team) {
+  state.team = team === 'blue' ? 'blue' : 'red';
+  if (teamBadge) {
+    teamBadge.innerHTML = `${flagMarkup(state.countryCode)} ${escapeHtml(state.playerName)} · ${TEAM[state.team].name}`;
+    teamBadge.style.borderColor = `#${new THREE.Color(TEAM[state.team].color).getHexString()}`;
+  }
+  document.documentElement.style.setProperty('--active-color', `#${new THREE.Color(TEAM[state.team].color).getHexString()}`);
+  viewModel.userData.sleeveMaterial.color.setHex(TEAM[state.team].color);
+  viewModel.userData.shield.userData.teamMaterial.color.setHex(TEAM[state.team].color);
+  playerAvatar.userData.uniform.color.setHex(TEAM[state.team].color);
+  playerAvatar.userData.equipment.userData.shield.userData.teamMaterial.color.setHex(TEAM[state.team].color);
+  paintAimMaterial.color.setHex(TEAM[state.team].color);
+  paintAimColumnMaterial.color.setHex(TEAM[state.team].color);
+  paintAimGlow.material.color.setHex(TEAM[state.team].color);
+}
+
 function startGame(team) {
   state.team = team;
   state.playerName = enforcePlayerNameLimit().trim() || (currentLanguage === 'tr' ? 'Bibishçi' : 'BibishPlayer');
@@ -4981,15 +5230,7 @@ function startGame(team) {
   bigMap.classList.add('hidden');
   state.countryCode = countrySelect.value || state.countryCode;
   localStorage.setItem(COUNTRY_KEY, state.countryCode);
-  if (teamBadge) {
-    teamBadge.innerHTML = `${flagMarkup(state.countryCode)} ${escapeHtml(state.playerName)} · ${TEAM[team].name}`;
-    teamBadge.style.borderColor = `#${new THREE.Color(TEAM[team].color).getHexString()}`;
-  }
-  document.documentElement.style.setProperty('--active-color', `#${new THREE.Color(TEAM[team].color).getHexString()}`);
-  viewModel.userData.sleeveMaterial.color.setHex(TEAM[team].color);
-  viewModel.userData.shield.userData.teamMaterial.color.setHex(TEAM[team].color);
-  playerAvatar.userData.uniform.color.setHex(TEAM[team].color);
-  playerAvatar.userData.equipment.userData.shield.userData.teamMaterial.color.setHex(TEAM[team].color);
+  applyPlayerTeam(team);
   teamScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
   hud.classList.remove('hidden');
@@ -4997,6 +5238,16 @@ function startGame(team) {
   updateWeaponUI();
   updateCareerUI();
   beginSpawnSelection('initial');
+  multiplayer?.connect({
+    name: state.playerName,
+    team: state.team,
+    countryCode: state.countryCode,
+    score: state.score,
+    kills: state.kills,
+    deaths: state.deaths,
+    elapsedSeconds: state.elapsedSeconds,
+    loadTestFullRoster: new URLSearchParams(window.location.search).get('stressFullRoster') === '1',
+  });
   showToast(`${countryFlag(state.countryCode)} ${state.playerName} · ${TEAM[team].name} · ${localized('DOĞUŞ KALESİNİ SEÇ', 'SELECT A SPAWN FORT')}`);
 }
 
@@ -5005,6 +5256,7 @@ function returnToTeamSelection() {
   setControlHelpExpanded(false);
   state.started = false;
   state.team = null;
+  multiplayer?.disconnect();
   state.mouseLeft = false;
   state.mouseRight = false;
   state.firing = false;
@@ -5040,6 +5292,17 @@ document.querySelector('#banner-settings-button').addEventListener('click', () =
 document.querySelector('#pause-settings-button').addEventListener('click', () => openSettings('pause'));
 document.querySelector('#apply-settings-button').addEventListener('click', applySettings);
 document.querySelector('#close-settings-button').addEventListener('click', closeSettings);
+document.querySelector('#how-to-play-button').addEventListener('click', openHowToPlay);
+document.querySelector('#close-how-to-play-button').addEventListener('click', closeHowToPlay);
+howToPlayScreen.addEventListener('pointerdown', (event) => {
+  if (event.target === howToPlayScreen) closeHowToPlay();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'Escape' && !howToPlayScreen.classList.contains('hidden')) {
+    event.preventDefault();
+    closeHowToPlay();
+  }
+});
 resetStatsButton.addEventListener('click', () => resetConfirmation.classList.remove('hidden'));
 document.querySelector('#cancel-reset-stats').addEventListener('click', () => resetConfirmation.classList.add('hidden'));
 document.querySelector('#confirm-reset-stats').addEventListener('click', () => {
@@ -5292,6 +5555,27 @@ function animate() {
     y: state.feetY,
     z: playerPosition.z,
   }, scopeFocus);
+  multiplayer?.update(delta, state.started ? {
+    x: playerPosition.x,
+    y: state.feetY,
+    z: playerPosition.z,
+    yaw: state.yaw,
+    pitch: state.pitch,
+    stance: state.stance,
+    weapon: state.weapon,
+    mode: state.mode,
+    shieldActive: state.shieldActive,
+    health: state.health,
+    score: state.score,
+    kills: state.kills,
+    deaths: state.deaths,
+    elapsedSeconds: state.elapsedSeconds,
+    phase: state.stepPhase,
+    action: state.actionTime > 0
+      ? ({ shot: 1, sword: 4, pee: 5, vomit: 6, poop: 7 }[state.actionKind] || 0)
+      : 0,
+    dead: state.dead,
+  } : null);
   updateFortControl(delta);
   updateWorldLod(delta);
   updateLocalSunShadow();
@@ -5346,10 +5630,12 @@ function animate() {
 setLoadingProgress(48, localized('Arazi geometrisi, kaleler ve çarpışmalar kuruluyor…', 'Building terrain geometry, forts and collisions…'));
 await new Promise((resolve) => requestAnimationFrame(resolve));
 createWorld();
-setLoadingProgress(68, localized('2.000 savaşçı LOD ve yapay zekâ katmanına yerleştiriliyor…', 'Placing 2,000 fighters into LOD and AI layers…'));
+setLoadingProgress(68, localized('Çevrimiçi oyuncu LOD ve ağ katmanı hazırlanıyor…', 'Preparing online-player LOD and network layers…'));
 await new Promise((resolve) => requestAnimationFrame(resolve));
 massArmy = new MassArmySystem(scene, {
-  countPerTeam: 995,
+  // Instanced buffer capacity only; disconnected slots cost no AI/simulation work.
+  // This keeps room rendering ready for 1,024 red + 1,024 blue remote players.
+  countPerTeam: 1024,
   terrainHeightAt,
   teamColors: { red: TEAM.red.color, blue: TEAM.blue.color },
   quality: activeTier,
@@ -5367,8 +5653,35 @@ massArmy = new MassArmySystem(scene, {
   onPlayerHit: handleMassPlayerHit,
   onKill: ({ killer, victim, weapon }) => addKillFeed(killer, victim, weapon),
   isBlocked: (x, z, feetY) => collidesStaticAt(x, z, 0.28, feetY, 1.8),
+  networkControlled: true,
   worldHalfWidth: WORLD.halfWidth,
   worldHalfDepth: WORLD.halfDepth,
+});
+  multiplayer = new MultiplayerClient({
+    onSnapshot: (players) => massArmy.syncRemotePlayers(players, multiplayer.clientId),
+    onEvent: handleNetworkGameEvent,
+    onWorldState: handleNetworkWorldState,
+  onRejected: () => blockDuplicateSession(),
+  onWelcome: ({ team }) => {
+    if (!state.started || team === state.team) return;
+    applyPlayerTeam(team);
+    if (state.spawnSelecting) {
+      state.spawnSelectedPoint = null;
+      state.spawnHoverPoint = null;
+      state.spawnHoverValid = false;
+      state.spawnHoverReason = 'spawn.ready';
+      state.spawnHoverCounts = { red: 0, blue: 0 };
+      updateSpawnSelectionCopy();
+      updateMaps();
+    }
+    showToast(localized(
+      `TAKIM DENGESİ · ${TEAM[team].name} TAKIMINA YERLEŞTİRİLDİN`,
+      `TEAM BALANCE · YOU WERE ASSIGNED TO ${TEAM[team].name}`,
+    ));
+  },
+  onStatus: (status) => {
+    document.documentElement.dataset.network = status;
+  },
 });
 
 function findRockPassageForStance(stanceName = 'stand') {
@@ -5429,7 +5742,104 @@ function findRockPassageForStance(stanceName = 'stand') {
 }
 
 globalThis.__bibishDebug = {
-  getLoadMetrics: () => ({ ...massArmy.getMetrics(), detailedNPCs: bots.length, totalNPCs: massArmy.count + bots.length }),
+  joinLoadTest: (team = 'red', index = 0) => {
+    const safeTeam = team === 'blue' ? 'blue' : 'red';
+    playerNameInput.value = `Load-${safeTeam === 'red' ? 'R' : 'B'}-${String(index).padStart(3, '0')}`;
+    countrySelect.value = safeTeam === 'red' ? 'TR' : 'US';
+    selectTeamChoice(safeTeam);
+    startGame(safeTeam);
+    const fort = fortData.find((candidate) => candidate.team === safeTeam) || fortData[0];
+    const point = evaluateSpawnArea(fort.x, fort.z);
+    finishSpawnSelection(point);
+    return { name: state.playerName, team: state.team, spawned: !state.spawnSelecting };
+  },
+  stepLoadTestMotion: (index = 0, time = performance.now()) => {
+    if (!state.started || state.dead) return null;
+    const homeZ = state.team === 'red' ? -WORLD.halfDepth * 0.48 : WORLD.halfDepth * 0.48;
+    const lane = (Number(index) % 25 - 12) * 4.2;
+    const angle = Number(time) * 0.00055 + Number(index) * 0.37;
+    playerPosition.x = THREE.MathUtils.clamp(lane + Math.sin(angle) * 18, -WORLD.halfWidth + 40, WORLD.halfWidth - 40);
+    playerPosition.z = THREE.MathUtils.clamp(homeZ + Math.cos(angle) * 26, -WORLD.halfDepth + 40, WORLD.halfDepth - 40);
+    state.feetY = floorHeightAt(playerPosition.x, playerPosition.z);
+    state.yaw = angle + (state.team === 'red' ? 0 : Math.PI);
+    state.stepPhase += 0.34;
+    state.moveAmount = 1;
+    return { x: playerPosition.x, y: state.feetY, z: playerPosition.z, yaw: state.yaw };
+  },
+  stepLoadTestGameplay: (index = 0, time = performance.now()) => {
+    if (!state.started || state.dead) return null;
+    const numericIndex = Number(index) || 0;
+    const seconds = Number(time) / 1000;
+    const attackDirection = state.team === 'red' ? 1 : -1;
+    const lane = (numericIndex % 41 - 20) * 5.4;
+    const march = Math.sin(seconds * 0.11 + numericIndex * 0.17) * WORLD.halfDepth * 0.42;
+    playerPosition.x = THREE.MathUtils.clamp(lane + Math.sin(seconds * 0.37 + numericIndex) * 24, -WORLD.halfWidth + 34, WORLD.halfWidth - 34);
+    playerPosition.z = THREE.MathUtils.clamp(march * attackDirection + Math.cos(seconds * 0.23 + numericIndex * 0.31) * 18, -WORLD.halfDepth + 34, WORLD.halfDepth - 34);
+    state.feetY = floorHeightAt(playerPosition.x, playerPosition.z);
+    state.yaw = attackDirection > 0 ? Math.PI : 0;
+    state.pitch = Math.sin(seconds * 0.19 + numericIndex) * 0.12;
+    state.stepPhase += 0.28 + (numericIndex % 5) * 0.018;
+    state.moveAmount = 1;
+    state.sprinting = Math.floor(seconds + numericIndex) % 5 < 2;
+    const stanceCycle = Math.floor(seconds / 4 + numericIndex) % 12;
+    state.stance = stanceCycle === 9 ? 'prone' : stanceCycle >= 6 ? 'crouch' : 'stand';
+    const equipmentCycle = Math.floor(seconds / 3 + numericIndex) % 5;
+    state.mode = equipmentCycle >= 3 ? 1 : 0;
+    state.weapon = state.mode === 0 && equipmentCycle === 2 ? 1 : 0;
+    state.shieldActive = state.mode === 0 && state.weapon === 1 && Math.floor(seconds * 2 + numericIndex) % 4 === 0;
+    state.aiming = state.mode === 0 && state.weapon === 0 && Math.floor(seconds + numericIndex) % 4 === 0;
+    const actionBucket = Math.floor(seconds * 1.25 + numericIndex * 0.13);
+    if (state.loadTestActionBucket !== actionBucket) {
+      state.loadTestActionBucket = actionBucket;
+      state.actionDuration = state.weapon === 1 ? 0.34 : state.mode === 1 ? 0.46 : 0.22;
+      state.actionTime = state.actionDuration;
+      state.actionKind = state.weapon === 1 ? 'sword' : state.mode === 1 ? ['pee', 'vomit', 'poop'][actionBucket % 3] : 'shot';
+    }
+    return {
+      x: playerPosition.x,
+      y: state.feetY,
+      z: playerPosition.z,
+      yaw: state.yaw,
+      stance: state.stance,
+      mode: state.mode,
+      weapon: state.weapon,
+      actionKind: state.actionKind,
+    };
+  },
+  getNetworkMetrics: () => multiplayer?.getMetrics() || null,
+  prepareNetworkEventTest: (x = 0, z = 0) => {
+    if (!state.started) return null;
+    playerPosition.x = THREE.MathUtils.clamp(Number(x) || 0, -WORLD.halfWidth + 20, WORLD.halfWidth - 20);
+    playerPosition.z = THREE.MathUtils.clamp(Number(z) || 0, -WORLD.halfDepth + 20, WORLD.halfDepth - 20);
+    state.feetY = floorHeightAt(playerPosition.x, playerPosition.z);
+    playerPosition.y = state.feetY;
+    state.health = 100;
+    state.dead = false;
+    state.mode = 0;
+    state.weapon = 0;
+    state.shieldActive = false;
+    state.stance = 'stand';
+    return { x: playerPosition.x, y: state.feetY, z: playerPosition.z, clientId: multiplayer?.clientId };
+  },
+  sendNetworkEvent: (event) => multiplayer?.sendEvent(event) || false,
+  paintNetworkTest: (x = playerPosition.x, y = state.feetY, z = playerPosition.z, wasteType = 'pee', radius = 0.5) => {
+    placeWastePaint(new THREE.Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0), Number(radius) || 0.5, wasteType);
+    return true;
+  },
+  getSharedGameState: () => ({
+    team: state.team,
+    health: state.health,
+    score: state.score,
+    kills: state.kills,
+    deaths: state.deaths,
+    dead: state.dead,
+    redPaint: territoryCounts[1],
+    bluePaint: territoryCounts[2],
+    forts: fortData.map((fort) => fort.team),
+    lastNetworkEventId,
+    leaders: multiplayer?.serverLeaderboard?.length || 0,
+  }),
+  getLoadMetrics: () => ({ ...massArmy.getMetrics(), detailedNPCs: 0, totalNPCs: 0, multiplayer: multiplayer?.getMetrics() }),
   getRendererMetrics: () => ({
     calls: renderer.info.render.calls,
     triangles: renderer.info.render.triangles,
@@ -5479,12 +5889,12 @@ globalThis.__bibishDebug = {
     return { distance: Math.hypot(playerPosition.x - meadow.x, playerPosition.z - meadow.z), ...globalThis.__bibishDebug.getGrassLodMetrics() };
   },
   getGameplayConfig: () => ({
-    npcPlayerCombatEnabled: NPC_PLAYER_COMBAT_ENABLED,
+    npcPlayerCombatEnabled: false,
     paintRadiusMultiplier: PAINT_RADIUS_MULTIPLIER,
     scopedBulletSpeed: 720,
     hipBulletSpeed: 480,
     scopedGravity: 1.35,
-    npcPerTeam: 1000,
+    npcPerTeam: 0,
     world: { width: WORLD.halfWidth * 2, depth: WORLD.halfDepth * 2 },
     forts: fortData.length,
     ladders: ladderZones.length,

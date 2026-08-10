@@ -16,6 +16,7 @@ import './style.css';
 const LANGUAGE_KEY = 'bibish-language-v1';
 const COUNTRY_KEY = 'bibish-country-v1';
 const AUDIO_SETTINGS_KEY = 'bibish-audio-volume-v1';
+const DEFAULT_AUDIO_VOLUME_PERCENT = 50;
 const PLAYER_NAME_MAX_LENGTH = 18;
 let currentLanguage = localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'tr';
 const I18N = {
@@ -471,8 +472,12 @@ const graphicsPreference = loadGraphicsPreference();
 let activeTier = graphicsPreference.mode === 'auto' ? detectedDevice.tier : graphicsPreference.mode;
 let activeProfile = QUALITY_PROFILES[activeTier];
 let audioVolumePercent = (() => {
-  const stored = Number(localStorage.getItem(AUDIO_SETTINGS_KEY));
-  return Number.isFinite(stored) ? THREE.MathUtils.clamp(Math.round(stored), 0, 100) : 50;
+  const stored = localStorage.getItem(AUDIO_SETTINGS_KEY);
+  if (stored === null) return DEFAULT_AUDIO_VOLUME_PERCENT;
+  const parsed = Number(stored);
+  return Number.isFinite(parsed)
+    ? THREE.MathUtils.clamp(Math.round(parsed), 0, 100)
+    : DEFAULT_AUDIO_VOLUME_PERCENT;
 })();
 let runtimeLodScale = 1;
 let measuredFps = 60;

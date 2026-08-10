@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bibish-runtime-v31';
+const CACHE_NAME = 'bibish-runtime-v32';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg'];
 
 async function cacheApplicationShell() {

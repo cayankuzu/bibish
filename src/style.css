@@ -297,7 +297,7 @@ h1 em {
 .country-flag { display: inline-block; width: 1.333em; height: 1em; flex: 0 0 auto; border-radius: 1px; background-color: rgba(255,255,255,.08); background-position: center; background-size: contain; background-repeat: no-repeat; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .country-trigger > .country-flag { width: 26px; height: 18px; }
 .country-option .country-flag { width: 24px; height: 17px; object-fit: contain; }
-.npc-label .country-flag { width: 18px; height: 13px; margin-right: 5px; vertical-align: -2px; }
+.npc-label .country-flag { width: 26px; height: 18px; margin-right: 7px; vertical-align: -4px; box-shadow: 0 0 0 2px rgba(255,255,255,.92), 0 1px 5px rgba(0,0,0,.9); }
 #team-badge .country-flag { width: 19px; height: 14px; margin-right: 6px; vertical-align: -2px; }
 .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
 .team-copy i, .player-record i, .score-row i { font-style: normal; }
@@ -611,10 +611,10 @@ h1 em {
   position: absolute;
   left: 0;
   top: 0;
-  width: 106px;
+  width: 138px;
   transform: translate3d(-9999px, -9999px, 0) translate(-50%, -100%);
   color: #fff;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
   text-align: center;

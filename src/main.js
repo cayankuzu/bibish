@@ -1733,10 +1733,13 @@ function updateBotNameplate(bot) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.fillStyle = 'rgba(12,12,11,.82)';
   context.fillRect(4, 4, 248, 56);
+  context.textBaseline = 'middle';
+  context.textAlign = 'left';
   context.fillStyle = '#fff';
-  context.font = '700 21px Arial';
-  context.textAlign = 'center';
-  context.fillText(`${countryFlag(bot.countryCode)} ${bot.name}`, 128, 26);
+  context.font = '30px "Segoe UI Emoji", sans-serif';
+  context.fillText(countryFlag(bot.countryCode), 14, 27);
+  context.font = '800 22px Arial';
+  context.fillText(bot.name, 58, 27);
   context.fillStyle = 'rgba(255,255,255,.18)';
   context.fillRect(18, 38, 220, 12);
   context.fillStyle = bot.team === 'red' ? '#ff315e' : '#28b8ff';
@@ -1752,8 +1755,8 @@ function createBotNameplate() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true, depthWrite: false }));
-  label.scale.set(2.7, 0.68, 1);
-  label.position.y = 2.35;
+  label.scale.set(3.15, 0.79, 1);
+  label.position.y = 2.42;
   label.renderOrder = 20;
   label.userData = { canvas, context, texture };
   return label;
@@ -2778,6 +2781,12 @@ function mapCoordinates(x, z, width, height, bounds = null) {
   };
 }
 
+const MAP_UNIT_MARKERS = Object.freeze({
+  red: Object.freeze({ fill: '#ff003c', halo: '#fff4f7', outline: '#240009' }),
+  blue: Object.freeze({ fill: '#00eaff', halo: '#f2feff', outline: '#001a22' }),
+});
+const mapUnitPointBuffer = [];
+
 function drawMap(context, canvas, circular = false) {
   const { width, height } = canvas;
   context.save();
@@ -2835,27 +2844,45 @@ function drawMap(context, canvas, circular = false) {
     if (bot.dead || bot.stance === 'prone' || (bot.stance === 'crouch' && !crouchedVisible)) continue;
     const point = mapCoordinates(bot.group.position.x, bot.group.position.z, width, height, bounds);
     if (point.x < 0 || point.x > width || point.y < 0 || point.y > height) continue;
-    context.beginPath();
-    context.arc(point.x, point.y, circular ? 2.2 : 4, 0, Math.PI * 2);
-    context.fillStyle = bot.team === 'red' ? '#ff315e' : '#28b8ff';
-    context.strokeStyle = '#111';
-    context.lineWidth = 1;
-    context.fill();
-    context.stroke();
+    const marker = MAP_UNIT_MARKERS[bot.team];
+    const markerHalf = circular ? 2.7 : 4.8;
+    const haloPadding = circular ? 1.1 : 1.7;
+    const outlinePadding = circular ? 1.8 : 2.7;
+    context.fillStyle = marker.outline;
+    context.fillRect(point.x - markerHalf - outlinePadding, point.y - markerHalf - outlinePadding, (markerHalf + outlinePadding) * 2, (markerHalf + outlinePadding) * 2);
+    context.fillStyle = marker.halo;
+    context.fillRect(point.x - markerHalf - haloPadding, point.y - markerHalf - haloPadding, (markerHalf + haloPadding) * 2, (markerHalf + haloPadding) * 2);
+    context.fillStyle = marker.fill;
+    context.fillRect(point.x - markerHalf, point.y - markerHalf, markerHalf * 2, markerHalf * 2);
   }
 
   // 494 hafif asker + 6 ayrıntılı asker = takım başına 250 NPC.
   for (const team of ['red', 'blue']) {
-    context.fillStyle = team === 'red' ? '#ff315e' : '#28b8ff';
-    const radius = circular ? 0.8 : 1.5;
+    const marker = MAP_UNIT_MARKERS[team];
+    const radius = circular ? 1.35 : 2.25;
+    const haloRadius = circular ? 2.15 : 3.4;
     const size = radius * 2;
+    const haloSize = haloRadius * 2;
+    mapUnitPointBuffer.length = 0;
     massArmy?.forEachMapAgent((x, z, agentTeam, _index, stance) => {
       if (agentTeam !== team || stance === 'prone' || (stance === 'crouch' && !crouchedVisible)) return;
       const pointX = (x - bounds.minX) / bounds.spanX * width;
       const pointY = (z - bounds.minZ) / bounds.spanZ * height;
       if (pointX < 0 || pointX > width || pointY < 0 || pointY > height) return;
-      context.fillRect(pointX - radius, pointY - radius, size, size);
+      mapUnitPointBuffer.push(pointX, pointY);
     });
+    context.fillStyle = marker.outline;
+    for (let index = 0; index < mapUnitPointBuffer.length; index += 2) {
+      context.fillRect(mapUnitPointBuffer[index] - haloRadius - 0.6, mapUnitPointBuffer[index + 1] - haloRadius - 0.6, haloSize + 1.2, haloSize + 1.2);
+    }
+    context.fillStyle = marker.halo;
+    for (let index = 0; index < mapUnitPointBuffer.length; index += 2) {
+      context.fillRect(mapUnitPointBuffer[index] - haloRadius, mapUnitPointBuffer[index + 1] - haloRadius, haloSize, haloSize);
+    }
+    context.fillStyle = marker.fill;
+    for (let index = 0; index < mapUnitPointBuffer.length; index += 2) {
+      context.fillRect(mapUnitPointBuffer[index] - radius, mapUnitPointBuffer[index + 1] - radius, size, size);
+    }
   }
 
   if (state.spawnSelecting && state.spawnHoverPoint) {

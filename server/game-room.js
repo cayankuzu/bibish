@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { monitorEventLoopDelay, performance } from 'node:perf_hooks';
 
-const SNAPSHOT_INTERVAL_MS = 250;
+const SNAPSHOT_INTERVAL_MS = 125;
 const MAX_NAME_LENGTH = 18;
 const WORLD_HALF_WIDTH = 720;
 const WORLD_HALF_DEPTH = 720;
@@ -157,8 +157,7 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
         continue;
       }
       const viewer = players.get(socket);
-      if (!viewer) continue;
-      const visiblePlayers = interestedPlayers(viewer, allPlayers, grid);
+      const visiblePlayers = viewer ? interestedPlayers(viewer, allPlayers, grid) : [];
       const message = JSON.stringify({
         type: 'snapshot',
         serverTime,
@@ -288,6 +287,18 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
       inboundBytes += raw.byteLength ?? Buffer.byteLength(String(raw));
       let message;
       try { message = JSON.parse(String(raw)); } catch { return; }
+      if (message.type === 'observe') {
+        const allPlayers = [...players.values()];
+        send(socket, {
+          type: 'snapshot',
+          serverTime: now(),
+          counts: teamCounts(),
+          totalPlayers: allPlayers.length,
+          leaders: leaderboard(allPlayers),
+          players: [],
+        });
+        return;
+      }
       if (message.type === 'join') {
         const previous = players.get(socket);
         const deviceKey = cleanText(message.deviceKey, 96);

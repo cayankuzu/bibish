@@ -79,6 +79,11 @@ const I18N = {
   },
 };
 
+I18N.tr['spawn.fallback'] = 'TAKIM KALESİ KALMADI · UYGUN BİR KARA NOKTASINA DOĞMAK İÇİN TIKLA';
+I18N.en['spawn.fallback'] = 'NO TEAM FORT REMAINS · CLICK ANY SUITABLE LAND TO DEPLOY';
+I18N.tr['spawn.fallbackValid'] = 'SERBEST ARAZİ DOĞUŞU · DOĞMAK İÇİN TIKLA';
+I18N.en['spawn.fallbackValid'] = 'OPEN-LAND DEPLOYMENT · CLICK TO SPAWN';
+
 function t(key) {
   return I18N[currentLanguage][key] ?? I18N.tr[key] ?? key;
 }
@@ -234,6 +239,21 @@ const STANCE = {
 };
 const FORT_SUMMIT_HEIGHT = 31;
 const PAINT_RADIUS_MULTIPLIER = 10;
+const WASTE_PAINT_RADIUS = Object.freeze({
+  vomit: { minimum: 0.075, maximum: 0.12 },
+  pee: { minimum: 0.44, maximum: 0.52 },
+  poop: { main: 0.86, splatterMinimum: 0.12, splatterMaximum: 0.22 },
+});
+const WASTE_RANGE = Object.freeze({
+  vomit: 27,
+  pee: 54,
+  poop: 92,
+});
+const RIFLE_BALLISTICS = Object.freeze({
+  hip: { muzzleSpeed: 310, gravity: 9.81, drag: 0.065 },
+  scoped: { muzzleSpeed: 640, gravity: 9.81, drag: 0.018 },
+  closeRange: 18,
+});
 
 const TEAM = {
   red: {
@@ -579,6 +599,7 @@ const healthValue = document.querySelector('#health-value');
 const shieldStatus = document.querySelector('#shield-status');
 const shieldStateLabel = document.querySelector('#shield-state');
 const scopeOverlay = document.querySelector('#scope-overlay');
+const crosshair = document.querySelector('#crosshair');
 const scopeZoomLabel = document.querySelector('#scope-zoom-label');
 const damageIndicator = document.querySelector('#damage-indicator');
 const npcLabelLayer = document.querySelector('#npc-label-layer');
@@ -647,6 +668,7 @@ let visibleWorldChunks = 0;
 const blockers = [];
 const blockerGrid = new Map();
 const BLOCKER_GRID_SIZE = 32;
+let collisionQuerySerial = 0;
 const paintables = [];
 const bulletSurfaces = [];
 const worldLodObjects = [];
@@ -754,6 +776,7 @@ const state = {
   jumpGrace: 0.12,
   sprinting: false,
   stance: 'stand',
+  stanceFallback: 'stand',
   stanceBlend: 0,
   currentEyeHeight: PLAYER.eyeHeight,
   currentBodyHeight: PLAYER.bodyHeight,
@@ -800,6 +823,13 @@ function updateCareerUI() {
   playerTime.textContent = formatElapsedTime(state.elapsedSeconds);
   playerKills.textContent = state.kills;
   playerDeaths.textContent = state.deaths;
+  const selfLeaderboardRow = leaderboard.querySelector('.self');
+  if (selfLeaderboardRow) {
+    selfLeaderboardRow.querySelector('.leader-score').textContent = score;
+    selfLeaderboardRow.querySelector('.leader-time').textContent = formatElapsedTime(state.elapsedSeconds);
+    selfLeaderboardRow.querySelector('.leader-kills').textContent = state.kills;
+    selfLeaderboardRow.querySelector('.leader-deaths').textContent = state.deaths;
+  }
   savedStats.textContent = currentLanguage === 'tr'
     ? `${formatElapsedTime(state.elapsedSeconds)} · ${score} PUAN · ${state.kills} KILL · ${state.deaths} ÖLÜM`
     : `${formatElapsedTime(state.elapsedSeconds)} · ${score} SCORE · ${state.kills} KILLS · ${state.deaths} DEATHS`;
@@ -1000,6 +1030,7 @@ const npcOcclusionCandidates = new Set();
 const rayDirection = new THREE.Vector3();
 const rayRight = new THREE.Vector3();
 const rayUp = new THREE.Vector3();
+let lastShotDiagnostics = null;
 const scopeFocusDirection = new THREE.Vector3(0, 0, -1);
 const scopeFocus = {
   active: false,
@@ -1030,6 +1061,19 @@ let territoryDirtyMaxX = -1;
 let territoryDirtyMaxY = -1;
 let mapTimer = 0;
 let lastBoardUpdate = -Infinity;
+const REMOTE_LEADERBOARD_TIME_REFRESH_MS = 3 * 60 * 1000;
+const remoteLeaderboardTimeCache = new Map();
+
+function displayedRemoteElapsedSeconds(playerId, elapsedSeconds, now) {
+  const id = String(playerId || '');
+  const safeElapsedSeconds = Math.max(0, Number(elapsedSeconds) || 0);
+  const cached = remoteLeaderboardTimeCache.get(id);
+  if (!cached || safeElapsedSeconds < cached.elapsedSeconds || now - cached.refreshedAt >= REMOTE_LEADERBOARD_TIME_REFRESH_MS) {
+    remoteLeaderboardTimeCache.set(id, { elapsedSeconds: safeElapsedSeconds, refreshedAt: now });
+    return safeElapsedSeconds;
+  }
+  return cached.elapsedSeconds;
+}
 
 // Boya dokusu görsel olarak yeterince keskin kalırken her atışta 4 MB yerine ~2,25 MB yüklenir.
 const TERRAIN_TEXTURE_SIZE = 1024;
@@ -1209,9 +1253,16 @@ function updateWorldLod(delta, force = false) {
   if (!force && worldLodTimer < (state.aiming ? 0.08 : 0.14)) return;
   worldLodTimer = 0;
   const baseDistance = activeTier === 'performance' ? 280 : activeTier === 'balanced' ? 500 : activeTier === 'high' ? 760 : 980;
-  const scopeDistance = Math.min(activeProfile.far - 20, 350 + state.scopeZoom * 68);
+  const scopeZoomBlend = THREE.MathUtils.clamp((state.scopeZoom - 2.4) / (10 - 2.4), 0, 1);
+  const scopeDistance = THREE.MathUtils.lerp(
+    Math.min(activeProfile.far - 8, Math.max(baseDistance, 620)),
+    activeProfile.far - 8,
+    scopeZoomBlend,
+  );
   const protectedBaseDistance = Math.max(260, baseDistance * runtimeLodScale);
-  const protectedScopeDistance = Math.max(protectedBaseDistance, scopeDistance * Math.max(0.72, runtimeLodScale));
+  // Dürbünün baktığı uzak alan, anlık adaptif LOD düşüşünden etkilenmemeli.
+  // Aksi halde özellikle 10x yakınlaştırmada kale etiketi kalırken kale geometrisi kaybolabiliyordu.
+  const protectedScopeDistance = Math.max(protectedBaseDistance, scopeDistance);
   const distanceLimit = THREE.MathUtils.lerp(protectedBaseDistance, protectedScopeDistance, state.scopeLodBlend);
   let visible = 0;
   for (const entry of worldLodObjects) {
@@ -1415,21 +1466,46 @@ function addMesh(geometry, material, position, options = {}) {
         collisionPoints.push(new THREE.Vector3().fromBufferAttribute(positions, index).applyMatrix4(mesh.matrixWorld));
       }
     }
-    // The declared blocker remains a minimum safety envelope, while the
-    // actual mesh vertices replace the old oversized transformed AABB hull.
-    for (const cornerX of [position.x - x / 2, position.x + x / 2]) {
-      for (const cornerZ of [position.z - z / 2, position.z + z / 2]) collisionPoints.push({ x: cornerX, z: cornerZ });
+    // Use the visible mesh footprint whenever geometry is available. Folding
+    // the declared box into this hull used to turn rotated rocks and shrubs
+    // into invisible rectangular walls, closing gaps that visibly fit a body.
+    // The declared dimensions remain a fallback for procedural geometries
+    // without position data.
+    if (collisionPoints.length < 3) {
+      for (const cornerX of [position.x - x / 2, position.x + x / 2]) {
+        for (const cornerZ of [position.z - z / 2, position.z + z / 2]) collisionPoints.push({ x: cornerX, z: cornerZ });
+      }
     }
-    const collisionSkin = 0.035;
+    const polygon = convexHullXZ(collisionPoints);
+    const minPolygonX = Math.min(...polygon.map((point) => point.x));
+    const maxPolygonX = Math.max(...polygon.map((point) => point.x));
+    const minPolygonZ = Math.min(...polygon.map((point) => point.z));
+    const maxPolygonZ = Math.max(...polygon.map((point) => point.z));
+    const collisionSkin = 0.018;
+    // Terrain scenery is a closed solid volume, not a floating shell. Some
+    // rotated low-poly rocks have a visual bounding-box bottom slightly above
+    // the sloped terrain; using that value alone leaves a crawl-height opening
+    // underneath. Extend every blocker down to the local terrain while keeping
+    // the precise visible X/Z hull, so real gaps between objects stay open.
+    const terrainFloorY = terrainHeightAt(position.x, position.z) - 0.08;
+    const declaredMinY = Number.isFinite(y) ? position.y - y / 2 : visualBounds.min.y;
+    const declaredMaxY = Number.isFinite(y) ? position.y + y / 2 : visualBounds.max.y;
+    const terrainGrounded = declaredMinY <= terrainFloorY + 0.42;
     blockers.push({
-      minX: Math.min(position.x - x / 2, visualBounds.min.x - collisionSkin),
-      maxX: Math.max(position.x + x / 2, visualBounds.max.x + collisionSkin),
-      minZ: Math.min(position.z - z / 2, visualBounds.min.z - collisionSkin),
-      maxZ: Math.max(position.z + z / 2, visualBounds.max.z + collisionSkin),
-      minY: Math.min(position.y - y / 2, visualBounds.min.y - collisionSkin),
-      maxY: Math.max(position.y + y / 2, visualBounds.max.y + collisionSkin),
+      minX: minPolygonX - collisionSkin,
+      maxX: maxPolygonX + collisionSkin,
+      minZ: minPolygonZ - collisionSkin,
+      maxZ: maxPolygonZ + collisionSkin,
+      // Only scenery/walls that actually touch the terrain are sealed down to
+      // it. Elevated bridge, parapet and arch geometry must retain the visible
+      // clearance below it; otherwise the fort gate becomes an invisible wall.
+      minY: terrainGrounded
+        ? Math.min(terrainFloorY, declaredMinY, visualBounds.min.y - collisionSkin)
+        : Math.min(declaredMinY, visualBounds.min.y - collisionSkin),
+      maxY: Math.max(declaredMaxY, visualBounds.max.y + collisionSkin),
       kind: options.blocker.kind || 'solid',
-      polygon: convexHullXZ(collisionPoints),
+      polygon,
+      terrainGrounded,
     });
   }
   if (options.walkable) {
@@ -1453,13 +1529,14 @@ function registerWorldLod(object, category = 'static') {
   // object's sphere surrounds the complete world chunk. Using the latter keeps
   // LOD culling anchored to the chunk's real map position.
   if (category === 'grass' && !object.boundingSphere) object.computeBoundingSphere?.();
-  let sphere = category === 'grass' && object.boundingSphere
+  const localSphere = category === 'grass' && object.boundingSphere
     ? object.boundingSphere
     : object.geometry.boundingSphere;
-  if (category === 'grassProxy') {
-    object.updateMatrixWorld(true);
-    sphere = object.geometry.boundingSphere.clone().applyMatrix4(object.matrixWorld);
-  }
+  // Every LOD sphere is stored in world space. Single, unmerged meshes keep a
+  // non-zero object transform; treating their local sphere as world-space made
+  // distant forts and scenery disappear while their labels stayed visible.
+  object.updateMatrixWorld(true);
+  const sphere = localSphere.clone().applyMatrix4(object.matrixWorld);
   worldLodObjects.push({ object, category, sphere });
   return object;
 }
@@ -1755,7 +1832,7 @@ function createFort(x, z, team, index) {
   fortData.push({
     x, y: groundY, z, team, originalTeam: team, index,
     name: currentLanguage === 'tr' ? `${team === 'red' ? 'Kırmızı' : 'Mavi'} Karakol ${index}` : `${team === 'red' ? 'Red' : 'Blue'} Fort ${index}`,
-    half, wallHeight, wallThickness, gateSide, captureTeam: null, captureProgress: 0, flag: flagParts.flag, flagLabel: flagParts.label,
+    half, wallHeight, wallThickness, gateWidth, gateSide, captureTeam: null, captureProgress: 0, flag: flagParts.flag, flagLabel: flagParts.label,
     colorMaterials: { stone: fortStone, dark: fortDark, foundation: fortFoundation, gateSign: gateSignMaterial },
   });
 }
@@ -3038,22 +3115,24 @@ function setLeaderboardCollapsed(collapsed, announce = true) {
     : localized('LİDER TABLOSU AÇILDI · K İLE DARALT', 'LEADERBOARD EXPANDED · PRESS K TO COLLAPSE'));
 }
 
-function updateMaps() {
-  refreshTerritoryTexture();
-  const total = paintableTerritoryCount;
-  const redPercent = territoryCounts[1] / total * 100;
-  const bluePercent = territoryCounts[2] / total * 100;
-  const paintedPercent = redPercent + bluePercent;
-  const redAngle = redPercent * 3.6;
-  const blueAngle = bluePercent * 3.6;
-  mapControlWidget.style.background = `conic-gradient(var(--red) 0 ${redAngle}deg, var(--blue) ${redAngle}deg ${redAngle + blueAngle}deg, rgba(40,42,39,.88) ${redAngle + blueAngle}deg 360deg)`;
-  const formatPercent = (value) => value > 0 && value < 1 ? value.toFixed(2) : value.toFixed(1);
-  mapControlValue.textContent = `${formatPercent(paintedPercent)}%`;
-  redScore.textContent = `${formatPercent(redPercent)}%`;
-  blueScore.textContent = `${formatPercent(bluePercent)}%`;
-  redScoreFill.style.width = `${redPercent}%`;
-  blueScoreFill.style.width = `${bluePercent}%`;
-  paintPercentages.innerHTML = `<span class="red">${t('team.redShort')} ${formatPercent(redPercent)}%</span><span class="blue">${t('team.blueShort')} ${formatPercent(bluePercent)}%</span>`;
+function updateMaps(scoreOnly = false) {
+  if (!scoreOnly) {
+    refreshTerritoryTexture();
+    const total = paintableTerritoryCount;
+    const redPercent = territoryCounts[1] / total * 100;
+    const bluePercent = territoryCounts[2] / total * 100;
+    const paintedPercent = redPercent + bluePercent;
+    const redAngle = redPercent * 3.6;
+    const blueAngle = bluePercent * 3.6;
+    mapControlWidget.style.background = `conic-gradient(var(--red) 0 ${redAngle}deg, var(--blue) ${redAngle}deg ${redAngle + blueAngle}deg, rgba(40,42,39,.88) ${redAngle + blueAngle}deg 360deg)`;
+    const formatPercent = (value) => value > 0 && value < 1 ? value.toFixed(2) : value.toFixed(1);
+    mapControlValue.textContent = `${formatPercent(paintedPercent)}%`;
+    redScore.textContent = `${formatPercent(redPercent)}%`;
+    blueScore.textContent = `${formatPercent(bluePercent)}%`;
+    redScoreFill.style.width = `${redPercent}%`;
+    blueScoreFill.style.width = `${bluePercent}%`;
+    paintPercentages.innerHTML = `<span class="red">${t('team.redShort')} ${formatPercent(redPercent)}%</span><span class="blue">${t('team.blueShort')} ${formatPercent(bluePercent)}%</span>`;
+  }
   const now = performance.now();
   if (now - lastBoardUpdate >= 500) {
     lastBoardUpdate = now;
@@ -3066,7 +3145,7 @@ function updateMaps() {
         team: entry[2] === 'blue' ? 'blue' : 'red',
         countryCode: String(entry[3] || 'TR'),
         score: Math.max(0, Number(entry[4]) || 0),
-        elapsedSeconds: Math.max(0, Number(entry[5]) || 0),
+        elapsedSeconds: displayedRemoteElapsedSeconds(entry[0], entry[5], now),
         kills: Math.max(0, Math.round(Number(entry[6]) || 0)),
         deaths: Math.max(0, Math.round(Number(entry[7]) || 0)),
         dead: Boolean(entry[8]),
@@ -3128,8 +3207,8 @@ function updateMaps() {
     });
     updateTeamCounts();
   }
-  if (state.started) drawMap(minimapContext, minimapCanvas, true);
-  if (state.mapOpen) drawMap(bigMapContext, bigMapCanvas, false);
+  if (!scoreOnly && state.started) drawMap(minimapContext, minimapCanvas, true);
+  if (!scoreOnly && state.mapOpen) drawMap(bigMapContext, bigMapCanvas, false);
 }
 
 function segmentHitsBlocker(origin, target, box) {
@@ -3349,9 +3428,12 @@ function collidesStaticAt(x, z, radius = state.currentRadius, feetY = state.feet
   const maxCellX = Math.floor((x + radius) / BLOCKER_GRID_SIZE);
   const minCellZ = Math.floor((z - radius) / BLOCKER_GRID_SIZE);
   const maxCellZ = Math.floor((z + radius) / BLOCKER_GRID_SIZE);
+  const queryId = ++collisionQuerySerial;
   for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
     for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
       for (const box of blockerGrid.get(`${cellX}:${cellZ}`) || []) {
+        if (box.collisionQueryId === queryId) continue;
+        box.collisionQueryId = queryId;
         if (
           box.maxY > feetY + 0.08 && box.minY < feetY + bodyHeight &&
           blockerCircleContact(box, x, z, radius)
@@ -3395,19 +3477,19 @@ function movePlayerWithSweep(dx, dz) {
 }
 
 function resolveStaticPenetration() {
-  for (let pass = 0; pass < 5; pass += 1) {
+  for (let pass = 0; pass < 8; pass += 1) {
     const radius = state.currentRadius;
     const minCellX = Math.floor((playerPosition.x - radius) / BLOCKER_GRID_SIZE);
     const maxCellX = Math.floor((playerPosition.x + radius) / BLOCKER_GRID_SIZE);
     const minCellZ = Math.floor((playerPosition.z - radius) / BLOCKER_GRID_SIZE);
     const maxCellZ = Math.floor((playerPosition.z + radius) / BLOCKER_GRID_SIZE);
     let correction = null;
-    const visited = new Set();
+    const queryId = ++collisionQuerySerial;
     for (let cellZ = minCellZ; cellZ <= maxCellZ; cellZ += 1) {
       for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
         for (const box of blockerGrid.get(`${cellX}:${cellZ}`) || []) {
-          if (visited.has(box)) continue;
-          visited.add(box);
+          if (box.collisionQueryId === queryId) continue;
+          box.collisionQueryId = queryId;
           if (box.maxY <= state.feetY + 0.08 || box.minY >= state.feetY + state.currentBodyHeight) continue;
           const contact = blockerCircleContact(box, playerPosition.x, playerPosition.z, radius);
           if (!contact) continue;
@@ -3436,6 +3518,19 @@ function resolveStaticPenetration() {
   }
 }
 
+function requestPlayerStance(nextStance, announce = true) {
+  const profile = STANCE[nextStance];
+  if (!profile || nextStance === state.stance) return true;
+  const isExpanding = profile.radius > state.currentRadius + 0.001 || profile.body > state.currentBodyHeight + 0.001;
+  if (isExpanding && collidesStaticAt(playerPosition.x, playerPosition.z, profile.radius, state.feetY, profile.body)) {
+    if (announce) showToast(localized('BURADA AYAĞA KALKACAK YER YOK', 'NOT ENOUGH ROOM TO STAND HERE'));
+    return false;
+  }
+  state.stanceFallback = state.stance;
+  state.stance = nextStance;
+  return true;
+}
+
 function movePlayer(delta) {
   if (!state.locked || state.dead || state.matchEnded) {
     state.moveAmount = 0;
@@ -3446,9 +3541,17 @@ function movePlayer(delta) {
   const stanceTarget = STANCE[state.stance];
   state.jumpQueued = Math.max(0, state.jumpQueued - delta);
   state.jumpGrace = state.canJump ? 0.12 : Math.max(0, state.jumpGrace - delta);
-  state.currentEyeHeight = THREE.MathUtils.lerp(state.currentEyeHeight, stanceTarget.eye, Math.min(1, delta * 11));
-  state.currentBodyHeight = THREE.MathUtils.lerp(state.currentBodyHeight, stanceTarget.body, Math.min(1, delta * 11));
-  state.currentRadius = THREE.MathUtils.lerp(state.currentRadius, stanceTarget.radius, Math.min(1, delta * 14));
+  const nextEyeHeight = THREE.MathUtils.lerp(state.currentEyeHeight, stanceTarget.eye, Math.min(1, delta * 11));
+  const nextBodyHeight = THREE.MathUtils.lerp(state.currentBodyHeight, stanceTarget.body, Math.min(1, delta * 11));
+  const nextRadius = THREE.MathUtils.lerp(state.currentRadius, stanceTarget.radius, Math.min(1, delta * 14));
+  const expanding = nextBodyHeight > state.currentBodyHeight + 0.0001 || nextRadius > state.currentRadius + 0.0001;
+  if (!expanding || !collidesStaticAt(playerPosition.x, playerPosition.z, nextRadius, state.feetY, nextBodyHeight)) {
+    state.currentEyeHeight = nextEyeHeight;
+    state.currentBodyHeight = nextBodyHeight;
+    state.currentRadius = nextRadius;
+  } else {
+    state.stance = state.stanceFallback in STANCE ? state.stanceFallback : 'crouch';
+  }
 
   if (state.thirdPerson) {
     const cameraForwardAmount = Number(state.keys.has('ArrowUp')) - Number(state.keys.has('ArrowDown'));
@@ -3543,6 +3646,10 @@ function movePlayer(delta) {
         state.canJump = true;
       } else state.canJump = false;
     }
+    // Stance interpolation, a jump edge or a moving floor must never leave the
+    // capsule embedded in scenery. Rampart tops are ignored by the vertical
+    // overlap test, so this is safe while walking and jumping on fort walls.
+    resolveStaticPenetration();
   }
 
   updateFootsteps(delta, movedDistance, sprinting);
@@ -3600,7 +3707,7 @@ function groundSurfaceAt(x, z) {
   };
 }
 
-function placeWastePaint(point, radius, wasteType, team = state.team, awardScore = true) {
+function placeWastePaint(point, radius, wasteType, team = state.team, awardScore = true, broadcast = awardScore) {
   if (point.y < -17.5 || Math.abs(point.x) > WORLD.halfWidth || Math.abs(point.z) > WORLD.halfDepth) return;
   const effectiveRadius = wasteType === 'team' ? radius : radius * PAINT_RADIUS_MULTIPLIER;
   const centerX = (point.x + WORLD.halfWidth) / (WORLD.halfWidth * 2) * TERRAIN_TEXTURE_SIZE;
@@ -3637,7 +3744,7 @@ function placeWastePaint(point, radius, wasteType, team = state.team, awardScore
   }
   terrainTextureDirty = true;
   paintTerritory(point, effectiveRadius, team, awardScore);
-  if (awardScore && state.started && team === state.team && wasteType !== 'team') {
+  if (broadcast && state.started && team === state.team && wasteType !== 'team') {
     multiplayer?.sendEvent({
       kind: 'paint',
       x: point.x,
@@ -4025,24 +4132,79 @@ function firstSolidHitBetween(start, end, padding = 0.02) {
   };
 }
 
+function synchronizeAimCamera() {
+  // A mouse event can arrive between render frames. On slower machines the
+  // stored yaw/pitch may therefore be newer than camera.quaternion, making a
+  // centered scope shot appear to leave to one side. Commit the latest input
+  // pose before deriving the center ray.
+  if (!state.thirdPerson) camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
+  camera.updateMatrixWorld(true);
+  const canvasBounds = renderer.domElement.getBoundingClientRect();
+  const sightBounds = (state.aiming ? scopeOverlay : crosshair)?.getBoundingClientRect();
+  const sightX = sightBounds && sightBounds.width > 0 ? sightBounds.left + sightBounds.width / 2 : canvasBounds.left + canvasBounds.width / 2;
+  const sightY = sightBounds && sightBounds.height > 0 ? sightBounds.top + sightBounds.height / 2 : canvasBounds.top + canvasBounds.height / 2;
+  const aimNdc = tmpV2.set(
+    (sightX - canvasBounds.left) / Math.max(1, canvasBounds.width) * 2 - 1,
+    -((sightY - canvasBounds.top) / Math.max(1, canvasBounds.height) * 2 - 1),
+    0,
+  );
+  raycaster.setFromCamera(aimNdc, camera);
+  rayDirection.copy(raycaster.ray.direction).normalize();
+  return rayDirection;
+}
+
+function resolveRifleAimTarget(maximumRange) {
+  raycaster.set(camera.position, rayDirection);
+  raycaster.far = maximumRange;
+  const surfaceHit = raycaster.intersectObjects([...combatTargets, ...bulletSurfaces], false)[0] || null;
+  const rayEnd = camera.position.clone().addScaledVector(rayDirection, maximumRange);
+  const playerHit = massArmy?.raycastSegment(camera.position, rayEnd, state.team) || null;
+  const surfaceDistance = surfaceHit?.distance ?? Infinity;
+  const playerDistance = playerHit ? camera.position.distanceTo(playerHit.point) : Infinity;
+  if (playerHit && playerDistance < surfaceDistance) {
+    return {
+      point: playerHit.point.clone(),
+      distance: playerDistance,
+      type: 'player',
+      impact: { ...playerHit },
+    };
+  }
+  if (surfaceHit) {
+    return {
+      point: surfaceHit.point.clone(),
+      distance: surfaceDistance,
+      type: surfaceHit.object.userData.damageZone || surfaceHit.object.userData.bot ? 'player' : 'surface',
+      impact: {
+        hit: surfaceHit,
+        point: surfaceHit.point.clone(),
+        normal: surfaceHit.face.normal.clone().transformDirection(surfaceHit.object.matrixWorld).normalize(),
+      },
+    };
+  }
+  return {
+    point: rayEnd,
+    distance: maximumRange,
+    type: 'range',
+    impact: null,
+  };
+}
+
 function performSniperShot() {
   state.actionTime = 0.22;
   state.actionDuration = 0.22;
   state.actionKind = 'shot';
-  camera.updateMatrixWorld(true);
+  synchronizeAimCamera();
   friendlyFigures.updateMatrixWorld(true);
-  cameraRay(0, 0);
-  raycaster.set(camera.position, rayDirection);
   const maximumRange = state.aiming ? 760 : 320;
-  raycaster.far = maximumRange;
-  const hit = raycaster.intersectObjects([...combatTargets, ...bulletSurfaces], false)[0];
+  const aimTarget = resolveRifleAimTarget(maximumRange);
   viewModel.updateMatrixWorld(true);
   const visualMuzzle = state.thirdPerson
     ? playerAvatar.localToWorld(new THREE.Vector3(0.25, 1.28, 0.42))
     : viewModel.userData.muzzle.getWorldPosition(new THREE.Vector3());
+  const startOffset = Math.min(0.1, Math.max(0.012, aimTarget.distance * 0.08));
   const start = state.thirdPerson
     ? visualMuzzle.clone()
-    : camera.position.clone().addScaledVector(rayDirection, 0.1);
+    : camera.position.clone().addScaledVector(rayDirection, startOffset);
   const muzzleObstruction = state.thirdPerson
     ? firstSolidHitBetween(new THREE.Vector3(playerPosition.x, state.feetY + 1.3, playerPosition.z), start, 0.08)
     : null;
@@ -4062,13 +4224,50 @@ function performSniperShot() {
     playActionSound('gun');
     return;
   }
-  const end = hit ? hit.point : camera.position.clone().addScaledVector(rayDirection, maximumRange);
-  const launchDirection = end.clone().sub(start).normalize();
+  const end = aimTarget.point;
   // Dürbün açıkken namlu çıkış hızı ve balistik katsayı artar: ilk yüzlerce metre neredeyse düz.
-  const muzzleSpeed = state.aiming ? 720 : 480;
-  const projectileGravity = state.aiming ? 1.35 : 9.81;
-  ballisticPool.fire(start, launchDirection.clone().multiplyScalar(muzzleSpeed), TEAM[state.team].soft, 0.14, projectileGravity);
+  const ballisticProfile = state.aiming ? RIFLE_BALLISTICS.scoped : RIFLE_BALLISTICS.hip;
+  const { muzzleSpeed, gravity: projectileGravity, drag: projectileDrag } = ballisticProfile;
+  const displacement = end.clone().sub(start);
+  const shotDistance = displacement.length();
+  const closeTarget = Boolean(aimTarget.impact && shotDistance <= RIFLE_BALLISTICS.closeRange);
+  if (closeTarget) {
+    const duration = THREE.MathUtils.clamp(shotDistance / 240, 0.025, 0.075);
+    beamPool.add(start, end, TEAM[state.team].soft, 0.024, Math.max(0.09, duration * 1.8));
+    globPool.add(start, end, TEAM[state.team].soft, 0.14, {
+      duration,
+      gravityDrop: 0,
+      endScale: 0.72,
+    });
+    globPool.add(visualMuzzle, visualMuzzle.clone().addScaledVector(rayDirection, 0.52), 0xfff1c7, 0.17);
+    impactBullet({ ...aimTarget.impact, travelDistance: shotDistance });
+    playActionSound('gun');
+    lastShotDiagnostics = {
+      targetType: aimTarget.type,
+      targetDistance: shotDistance,
+      closeResolved: true,
+      targetPoint: end.toArray(),
+      impactPoint: end.toArray(),
+      impactError: 0,
+    };
+    return;
+  }
+  // Beyond close range the reticle defines the barrel direction, not a
+  // guaranteed hit point. Gravity and aerodynamic drag then create real drop
+  // and speed loss. The scoped profile is faster and more stable, but it is
+  // still a physical projectile rather than a laser.
+  const launchVelocity = displacement.normalize().multiplyScalar(muzzleSpeed);
+  const launchDirection = launchVelocity.clone().normalize();
+  ballisticPool.fire(start, launchVelocity, TEAM[state.team].soft, 0.14, projectileGravity, projectileDrag);
   globPool.add(visualMuzzle, visualMuzzle.clone().addScaledVector(launchDirection, 0.52), 0xfff1c7, 0.17);
+  lastShotDiagnostics = {
+    targetType: aimTarget.type,
+    targetDistance: shotDistance,
+    closeResolved: false,
+    targetPoint: end.toArray(),
+    impactPoint: null,
+    impactError: null,
+  };
   playActionSound('gun');
 }
 
@@ -4124,31 +4323,73 @@ function performPee(aimResult = state.paintTarget) {
   const direction = aimResult?.hit
     ? aimResult.hit.point.clone().sub(start).normalize()
     : cameraRay(0, 0).clone();
-  const result = tracePaintPath(start, direction, 150, 2);
+  const result = tracePaintPath(start, direction, WASTE_RANGE.pee, 2);
   if (state.soundCooldown <= 0) {
     playActionSound('pee');
     state.soundCooldown = 0.16;
   }
   const path = result.path.length ? result.path : [result.escaped].filter(Boolean);
   let segmentStart = start;
+  let streamPiece = 0;
   for (const pathPoint of path) {
     const distance = segmentStart.distanceTo(pathPoint);
-    let previous = segmentStart;
-    for (let segment = 1; segment <= 4; segment += 1) {
-      const t = segment / 4;
-      const next = segmentStart.clone().lerp(pathPoint, t);
-      next.y -= Math.sin(t * Math.PI) * Math.min(2.4, distance * 0.022);
-      beamPool.add(previous, next, WASTE_STYLE[state.team].pee, 0.024 + (1 - t) * 0.017, 0.11);
-      previous = next;
+    const pieces = THREE.MathUtils.clamp(Math.ceil(distance / 4.2), 4, 12);
+    for (let piece = 0; piece < pieces; piece += 1) {
+      const from = segmentStart.clone().lerp(pathPoint, piece / pieces);
+      const to = segmentStart.clone().lerp(pathPoint, (piece + 0.72) / pieces);
+      const sag = Math.min(0.2, distance * 0.0035);
+      const size = THREE.MathUtils.randFloat(0.045, 0.075) * (1 - piece / pieces * 0.24);
+      globPool.add(from, to, WASTE_STYLE[state.team].pee, size, {
+        duration: THREE.MathUtils.randFloat(0.12, 0.2),
+        delay: (streamPiece % 9) * 0.012,
+        arcHeight: -sag,
+        gravityDrop: 0.045,
+        endScale: 0.58,
+      });
+      if (piece % 2 === 0) beamPool.add(from, to, WASTE_STYLE[state.team].pee, size * 0.34, 0.075);
+      streamPiece += 1;
     }
     segmentStart = pathPoint;
   }
   if (!result.hit) return;
-  placeWastePaint(result.hit.point, THREE.MathUtils.randFloat(0.35, 0.55), 'pee');
+  placeWastePaint(
+    result.hit.point,
+    THREE.MathUtils.randFloat(WASTE_PAINT_RADIUS.pee.minimum, WASTE_PAINT_RADIUS.pee.maximum),
+    'pee',
+  );
   const splashStart = result.hit.point.clone().addScaledVector(result.normal, 0.35);
-  for (let i = 0; i < Math.max(1, Math.round(3 * activeProfile.effectDensity)); i += 1) {
-    const splashEnd = result.hit.point.clone().add(new THREE.Vector3(THREE.MathUtils.randFloatSpread(0.7), 0.04, THREE.MathUtils.randFloatSpread(0.7)));
-    globPool.add(splashStart, splashEnd, WASTE_STYLE[state.team].pee, THREE.MathUtils.randFloat(0.045, 0.085));
+  const splashCount = Math.max(3, Math.round(7 * activeProfile.effectDensity));
+  for (let i = 0; i < splashCount; i += 1) {
+    const offsetX = THREE.MathUtils.randFloatSpread(1.65);
+    const offsetZ = THREE.MathUtils.randFloatSpread(1.65);
+    const landing = groundSurfaceAt(result.hit.point.x + offsetX, result.hit.point.z + offsetZ);
+    const splashEnd = landing?.point || result.hit.point.clone().add(new THREE.Vector3(offsetX, 0.04, offsetZ));
+    globPool.add(splashStart, splashEnd, WASTE_STYLE[state.team].pee, THREE.MathUtils.randFloat(0.035, 0.075), {
+      duration: THREE.MathUtils.randFloat(0.18, 0.34),
+      delay: i * 0.009,
+      arcHeight: THREE.MathUtils.randFloat(0.18, 0.52),
+      gravityDrop: 0.08,
+      endScale: 0.3,
+    });
+    if (landing) placeWastePaint(landing.point, THREE.MathUtils.randFloat(0.055, 0.095), 'pee', state.team, true, false);
+  }
+
+  // Each hard-surface ricochet throws a few droplets onto the ground below.
+  // Those droplets are real territory stamps as well as visible particles.
+  for (const bouncePoint of result.path.slice(0, -1)) {
+    for (let droplet = 0; droplet < 2; droplet += 1) {
+      const landing = groundSurfaceAt(
+        bouncePoint.x + THREE.MathUtils.randFloatSpread(1.4),
+        bouncePoint.z + THREE.MathUtils.randFloatSpread(1.4),
+      );
+      if (!landing) continue;
+      globPool.add(bouncePoint, landing.point, WASTE_STYLE[state.team].pee, THREE.MathUtils.randFloat(0.035, 0.065), {
+        duration: THREE.MathUtils.randFloat(0.2, 0.38),
+        arcHeight: THREE.MathUtils.randFloat(0.08, 0.26),
+        gravityDrop: 0.12,
+      });
+      placeWastePaint(landing.point, THREE.MathUtils.randFloat(0.045, 0.08), 'pee', state.team, true, false);
+    }
   }
 }
 
@@ -4159,22 +4400,60 @@ function performVomit(aimResult = state.paintTarget) {
   state.actionKind = 'vomit';
   const start = getEmissionStart('vomit');
   playActionSound('vomit');
-  const globCount = Math.max(2, Math.round(7 * activeProfile.effectDensity));
+  const globCount = Math.max(4, Math.round(9 * activeProfile.effectDensity));
+  const vomitPalette = [
+    WASTE_STYLE[state.team].vomit,
+    0xd85f32,
+    0xb94d45,
+    0x738fa1,
+    0xe99a43,
+  ];
+  let paintBroadcast = true;
   for (let i = 0; i < globCount; i += 1) {
     const direction = aimResult?.hit
       ? aimResult.hit.point.clone().sub(start).normalize()
       : cameraRay(0, 0).clone();
-    direction.add(new THREE.Vector3(THREE.MathUtils.randFloatSpread(0.1), THREE.MathUtils.randFloatSpread(0.07), THREE.MathUtils.randFloatSpread(0.1))).normalize();
-    const result = tracePaintPath(start, direction, 58, 2);
-    if (result.hit) placeWastePaint(result.hit.point, THREE.MathUtils.randFloat(0.55, 0.95), 'vomit');
-    const particleColor = new THREE.Color(WASTE_STYLE[state.team].vomit)
-      .lerp(new THREE.Color(TEAM[state.team].color), THREE.MathUtils.randFloat(0.08, 0.2));
+    direction.add(new THREE.Vector3(
+      THREE.MathUtils.randFloatSpread(0.14),
+      THREE.MathUtils.randFloatSpread(0.09),
+      THREE.MathUtils.randFloatSpread(0.14),
+    )).normalize();
+    const result = tracePaintPath(start, direction, WASTE_RANGE.vomit, 1);
+    if (result.hit) {
+      placeWastePaint(
+        result.hit.point,
+        THREE.MathUtils.randFloat(WASTE_PAINT_RADIUS.vomit.minimum, WASTE_PAINT_RADIUS.vomit.maximum),
+        'vomit',
+        state.team,
+        true,
+        paintBroadcast,
+      );
+      paintBroadcast = false;
+    }
+    const particleColor = new THREE.Color(vomitPalette[i % vomitPalette.length])
+      .lerp(new THREE.Color(TEAM[state.team].color), THREE.MathUtils.randFloat(0.03, 0.12));
     let previous = start;
     for (const pathPoint of result.path) {
-      globPool.add(previous, pathPoint, particleColor, THREE.MathUtils.randFloat(0.11, 0.24));
+      const distance = previous.distanceTo(pathPoint);
+      globPool.add(previous, pathPoint, particleColor, THREE.MathUtils.randFloat(0.065, 0.16), {
+        duration: THREE.MathUtils.clamp(distance / 42, 0.18, 0.62),
+        delay: i * 0.016,
+        arcHeight: THREE.MathUtils.randFloat(0.04, 0.28),
+        gravityDrop: THREE.MathUtils.randFloat(0.08, 0.24),
+        endScale: 0.42,
+      });
       previous = pathPoint;
     }
-    if (result.escaped) globPool.add(previous, result.escaped, particleColor, THREE.MathUtils.randFloat(0.11, 0.2));
+    if (result.escaped) {
+      const distance = previous.distanceTo(result.escaped);
+      globPool.add(previous, result.escaped, particleColor, THREE.MathUtils.randFloat(0.06, 0.145), {
+        duration: THREE.MathUtils.clamp(distance / 42, 0.18, 0.68),
+        delay: i * 0.016,
+        arcHeight: THREE.MathUtils.randFloat(0.02, 0.2),
+        gravityDrop: THREE.MathUtils.randFloat(0.12, 0.34),
+        endScale: 0.3,
+      });
+    }
   }
 }
 
@@ -4210,15 +4489,19 @@ function updatePaintAimMarker() {
     paintAimGlow.visible = false;
     return;
   }
-  const result = rayFromCameraToGround(0, 0, 180);
+  const wasteType = WASTE_TYPES[state.wasteIndex];
+  const result = rayFromCameraToGround(0, 0, WASTE_RANGE[wasteType]);
   state.paintTarget = result && (result.hit || result.path.length) ? result : null;
   paintAimMarker.visible = Boolean(result?.hit);
   paintAimColumn.visible = Boolean(result?.hit);
   paintAimGlow.visible = Boolean(result?.hit);
   if (!result?.hit) return;
-  const wasteType = WASTE_TYPES[state.wasteIndex];
   const color = WASTE_STYLE[state.team][wasteType];
-  const targetRadius = wasteType === 'pee' ? 5.5 : wasteType === 'vomit' ? 9.5 : 6.8;
+  const targetRadius = wasteType === 'poop'
+    ? WASTE_PAINT_RADIUS.poop.main * PAINT_RADIUS_MULTIPLIER
+    : wasteType === 'pee'
+      ? (WASTE_PAINT_RADIUS.pee.minimum + WASTE_PAINT_RADIUS.pee.maximum) * 0.5 * PAINT_RADIUS_MULTIPLIER
+      : WASTE_PAINT_RADIUS.vomit.maximum * PAINT_RADIUS_MULTIPLIER;
   paintAimMaterial.color.setHex(color);
   paintAimColumnMaterial.color.setHex(color);
   paintAimGlow.material.color.setHex(color);
@@ -4234,9 +4517,9 @@ function updatePaintAimMarker() {
 
 function releasePaintAction() {
   if (state.paintCadence > 0 || state.dead) return;
-  const aimResult = state.paintTarget || rayFromCameraToGround(0, 0, 180);
-  if (!aimResult || (!aimResult.hit && !aimResult.path?.length)) return;
   const wasteType = WASTE_TYPES[state.wasteIndex];
+  const aimResult = state.paintTarget || rayFromCameraToGround(0, 0, WASTE_RANGE[wasteType]);
+  if (!aimResult || (!aimResult.hit && !aimResult.path?.length)) return;
   state.paintCadence = wasteType === 'pee' ? 0.34 : wasteType === 'vomit' ? 0.58 : 0.78;
   if (wasteType === 'pee') performPee(aimResult);
   if (wasteType === 'vomit') performVomit(aimResult);
@@ -4264,11 +4547,33 @@ function updateCombat(delta) {
 }
 
 function impactProjectile(point) {
-  placeWastePaint(point, 0.68, 'poop');
-  const splatterCount = Math.max(2, Math.round(5 * activeProfile.effectDensity));
+  placeWastePaint(point, WASTE_PAINT_RADIUS.poop.main, 'poop');
+  const splatterCount = Math.max(4, Math.round(8 * activeProfile.effectDensity));
   for (let i = 0; i < splatterCount; i += 1) {
-    const offset = new THREE.Vector3(THREE.MathUtils.randFloatSpread(1.6), 0, THREE.MathUtils.randFloatSpread(1.6));
-    placeWastePaint(point.clone().add(offset), THREE.MathUtils.randFloat(0.2, 0.38), 'poop');
+    const offset = new THREE.Vector3(THREE.MathUtils.randFloatSpread(2.25), 0, THREE.MathUtils.randFloatSpread(2.25));
+    const landing = groundSurfaceAt(point.x + offset.x, point.z + offset.z);
+    const fragmentEnd = landing?.point || point.clone().add(offset);
+    globPool.add(
+      point.clone().add(new THREE.Vector3(0, 0.16, 0)),
+      fragmentEnd,
+      WASTE_STYLE[state.team].poop,
+      THREE.MathUtils.randFloat(0.1, 0.22),
+      {
+        duration: THREE.MathUtils.randFloat(0.2, 0.48),
+        delay: i * 0.012,
+        arcHeight: THREE.MathUtils.randFloat(0.2, 0.78),
+        gravityDrop: THREE.MathUtils.randFloat(0.04, 0.13),
+        endScale: THREE.MathUtils.randFloat(0.34, 0.62),
+      },
+    );
+    placeWastePaint(
+      fragmentEnd,
+      THREE.MathUtils.randFloat(WASTE_PAINT_RADIUS.poop.splatterMinimum, WASTE_PAINT_RADIUS.poop.splatterMaximum),
+      'poop',
+      state.team,
+      true,
+      false,
+    );
   }
 }
 
@@ -4286,6 +4591,11 @@ function testBulletCollision(previous, current) {
 }
 
 function impactBullet(result) {
+  if (lastShotDiagnostics && !lastShotDiagnostics.closeResolved && result.point) {
+    const targetPoint = new THREE.Vector3().fromArray(lastShotDiagnostics.targetPoint);
+    lastShotDiagnostics.impactPoint = result.point.toArray();
+    lastShotDiagnostics.impactError = targetPoint.distanceTo(result.point);
+  }
   const zone = result.damageZone || result.hit?.object.userData.damageZone || 'torso';
   const travelDistance = result.travelDistance || 0;
   const damage = calculateWeaponDamage(zone, travelDistance);
@@ -4464,8 +4774,11 @@ function spawnFortLabel(fort) {
 
 function updateSpawnSelectionCopy() {
   if (!state.spawnSelecting) return;
+  const hasOwnedFort = ownedSpawnForts().length > 0;
   bigMapTitle.textContent = t('spawn.title');
-  spawnMapInstruction.textContent = t(state.spawnSelectionReason === 'initial' ? 'spawn.initial' : 'spawn.respawn');
+  spawnMapInstruction.textContent = hasOwnedFort
+    ? t(state.spawnSelectionReason === 'initial' ? 'spawn.initial' : 'spawn.respawn')
+    : t('spawn.fallback');
   spawnMapInstruction.classList.remove('hidden');
   spawnMapStatus.classList.remove('hidden');
   bigMapCanvas.classList.toggle('waiting', state.spawnSelectionReason === 'respawn' && state.respawnTimer > 0);
@@ -4477,13 +4790,15 @@ function updateSpawnSelectionCopy() {
     return;
   }
   if (!state.spawnHoverPoint) {
-    spawnMapStatus.textContent = t('spawn.ready');
+    spawnMapStatus.textContent = hasOwnedFort ? t('spawn.ready') : t('spawn.fallback');
     return;
   }
   const friends = state.spawnHoverCounts[state.team] || 0;
   const enemies = state.spawnHoverCounts[state.team === 'red' ? 'blue' : 'red'] || 0;
   if (state.spawnHoverValid) {
-    spawnMapStatus.textContent = t('spawn.valid').replace('{friends}', friends);
+    spawnMapStatus.textContent = hasOwnedFort
+      ? t('spawn.valid').replace('{friends}', friends)
+      : t('spawn.fallbackValid');
   } else if (state.spawnHoverReason === 'spawn.enemies') {
     spawnMapStatus.textContent = t('spawn.enemies').replace('{enemies}', enemies);
   } else {
@@ -4541,8 +4856,17 @@ function evaluateSpawnArea(x, z) {
   const feetY = floorHeightAt(x, z);
   const insideWorld = Math.abs(x) <= WORLD.halfWidth - 34 && Math.abs(z) <= WORLD.halfDepth - 34;
   const ownedFort = fortData.some((fort) => fort.team === state.team && Math.abs(x - fort.x) <= fort.half - 2 && Math.abs(z - fort.z) <= fort.half - 2);
+  const hasOwnedFort = ownedSpawnForts().length > 0;
   const suitableTerrain = insideWorld && terrainHeightAt(x, z) > -9 && !collidesStaticAt(x, z, PLAYER.radius, feetY, PLAYER.bodyHeight);
-  const reason = !suitableTerrain ? 'spawn.blocked' : enemies > 0 ? 'spawn.enemies' : friends < 1 && !ownedFort ? 'spawn.noFriends' : 'spawn.valid';
+  const reason = !suitableTerrain
+    ? 'spawn.blocked'
+    : !hasOwnedFort
+      ? 'spawn.valid'
+      : enemies > 0
+        ? 'spawn.enemies'
+        : friends < 1 && !ownedFort
+          ? 'spawn.noFriends'
+          : 'spawn.valid';
   return { x, z, counts, valid: reason === 'spawn.valid', reason };
 }
 
@@ -4588,9 +4912,11 @@ function finishSpawnSelection(point = state.spawnSelectedPoint) {
   bigMapTitle.textContent = t('hud.fieldMap');
   const pointerLockRequest = renderer.domElement.requestPointerLock?.();
   pointerLockRequest?.catch?.(() => {});
-  showToast(state.spawnSelectionReason === 'initial'
-    ? localized('SEÇTİĞİN KALEDE SAVAŞA KATILDIN', 'DEPLOYED AT THE SELECTED FORT')
-    : localized('SEÇTİĞİN KALEDE YENİDEN DOĞDUN', 'RESPAWNED AT THE SELECTED FORT'));
+  showToast(ownedSpawnForts().length
+    ? state.spawnSelectionReason === 'initial'
+      ? localized('SEÇTİĞİN KALEDE SAVAŞA KATILDIN', 'DEPLOYED AT THE SELECTED FORT')
+      : localized('SEÇTİĞİN KALEDE YENİDEN DOĞDUN', 'RESPAWNED AT THE SELECTED FORT')
+    : localized('SERBEST ARAZİDE YENİDEN DOĞDUN', 'RESPAWNED ON OPEN LAND'));
   return true;
 }
 
@@ -5012,8 +5338,36 @@ function handleNetworkGameEvent(event) {
     if (emitter) {
       const startHeight = wasteType === 'vomit' ? 1.68 : wasteType === 'poop' ? 0.72 : 0.78;
       const start = new THREE.Vector3(emitter.x, emitter.y + startHeight, emitter.z);
-      if (wasteType === 'pee') beamPool.add(start, impactPoint, WASTE_STYLE[team].pee, 0.032, 0.16);
-      else globPool.add(start, impactPoint, WASTE_STYLE[team][wasteType], wasteType === 'vomit' ? 0.2 : 0.24);
+      if (wasteType === 'pee') {
+        const pieces = 7;
+        for (let piece = 0; piece < pieces; piece += 1) {
+          const from = start.clone().lerp(impactPoint, piece / pieces);
+          const to = start.clone().lerp(impactPoint, (piece + 0.72) / pieces);
+          globPool.add(from, to, WASTE_STYLE[team].pee, THREE.MathUtils.randFloat(0.04, 0.07), {
+            duration: THREE.MathUtils.randFloat(0.13, 0.2),
+            delay: piece * 0.012,
+            arcHeight: -0.08,
+            gravityDrop: 0.04,
+            endScale: 0.55,
+          });
+        }
+      } else if (wasteType === 'vomit') {
+        const colors = [WASTE_STYLE[team].vomit, 0xd85f32, 0xb94d45, 0x738fa1, 0xe99a43];
+        for (let piece = 0; piece < colors.length; piece += 1) {
+          const spread = impactPoint.clone().add(new THREE.Vector3(
+            THREE.MathUtils.randFloatSpread(0.65),
+            0,
+            THREE.MathUtils.randFloatSpread(0.65),
+          ));
+          globPool.add(start, spread, colors[piece], THREE.MathUtils.randFloat(0.065, 0.15), {
+            duration: THREE.MathUtils.randFloat(0.24, 0.46),
+            delay: piece * 0.018,
+            arcHeight: THREE.MathUtils.randFloat(0.04, 0.24),
+            gravityDrop: 0.16,
+            endScale: 0.36,
+          });
+        }
+      } else globPool.add(start, impactPoint, WASTE_STYLE[team].poop, 0.24, { duration: 0.34, arcHeight: 0.42, endScale: 0.72 });
       playActionSound(wasteType, start);
     }
     placeWastePaint(
@@ -5282,7 +5636,8 @@ function returnToTeamSelection() {
   setControlHelpExpanded(false);
   state.started = false;
   state.team = null;
-  multiplayer?.disconnect();
+  multiplayer?.disconnect(false);
+  multiplayer?.observe();
   state.mouseLeft = false;
   state.mouseRight = false;
   state.firing = false;
@@ -5469,12 +5824,16 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.code === 'KeyQ' && !event.repeat && state.started && state.locked && !state.dead) cycleActiveSelection(1);
   if (event.code === 'KeyC' && !event.repeat && state.started) {
-    state.stance = state.stance === 'crouch' ? 'stand' : 'crouch';
-    showToast(state.stance === 'crouch' ? localized('ÇÖMELDİN · C İLE KALK', 'CROUCHED · PRESS C TO STAND') : localized('AYAĞA KALKTIN', 'STOOD UP'));
+    const nextStance = state.stance === 'crouch' ? 'stand' : 'crouch';
+    if (requestPlayerStance(nextStance)) {
+      showToast(state.stance === 'crouch' ? localized('ÇÖMELDİN · C İLE KALK', 'CROUCHED · PRESS C TO STAND') : localized('AYAĞA KALKTIN', 'STOOD UP'));
+    }
   }
   if (event.code === 'KeyV' && !event.repeat && state.started) {
-    state.stance = state.stance === 'prone' ? 'stand' : 'prone';
-    showToast(state.stance === 'prone' ? localized('SÜRÜNME · V İLE KALK', 'PRONE · PRESS V TO STAND') : localized('AYAĞA KALKTIN', 'STOOD UP'));
+    const nextStance = state.stance === 'prone' ? 'stand' : 'prone';
+    if (requestPlayerStance(nextStance)) {
+      showToast(state.stance === 'prone' ? localized('SÜRÜNME · V İLE KALK', 'PRONE · PRESS V TO STAND') : localized('AYAĞA KALKTIN', 'STOOD UP'));
+    }
   }
   const cameraKey = event.key?.toLocaleLowerCase('tr-TR') === 'ç' || event.code === 'Semicolon';
   if (cameraKey && !event.repeat && state.started) {
@@ -5495,9 +5854,10 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.code === 'Space' && state.locked && !event.repeat) {
     if (state.stance !== 'stand') {
-      state.stance = 'stand';
-      state.jumpQueued = 0;
-      showToast(localized('AYAĞA KALKTIN', 'STOOD UP'));
+      if (requestPlayerStance('stand')) {
+        state.jumpQueued = 0;
+        showToast(localized('AYAĞA KALKTIN', 'STOOD UP'));
+      }
     } else {
       state.jumpQueued = 0.14;
     }
@@ -5570,7 +5930,13 @@ function animate() {
   const viewHalfAngle = state.aiming ? Math.max(12, horizontalHalfFov + 8) : Math.min(78, horizontalHalfFov + 18);
   scopeFocus.viewCosine = Math.cos(THREE.MathUtils.degToRad(viewHalfAngle));
   scopeFocus.cosine = Math.cos(THREE.MathUtils.degToRad(Math.max(1.4, Math.max(verticalHalfFov, horizontalHalfFov) + 1.5)));
-  scopeFocus.maxDistance = THREE.MathUtils.lerp(220, Math.min(activeProfile.far - 25, 320 + state.scopeZoom * 66), state.scopeLodBlend);
+  const scopeZoomDistanceBlend = THREE.MathUtils.clamp((state.scopeZoom - 2.4) / (10 - 2.4), 0, 1);
+  const focusedRenderDistance = THREE.MathUtils.lerp(
+    Math.min(activeProfile.far - 8, 620),
+    activeProfile.far - 8,
+    scopeZoomDistanceBlend,
+  );
+  scopeFocus.maxDistance = THREE.MathUtils.lerp(220, focusedRenderDistance, state.scopeLodBlend);
   const baseDetailBudget = activeTier === 'performance' ? 50 : activeTier === 'balanced' ? 110 : activeTier === 'high' ? 200 : 320;
   scopeFocus.detailBudget = Math.round(THREE.MathUtils.lerp(baseDetailBudget, baseDetailBudget + 48, state.scopeLodBlend));
   scopeFocus.lodScale = runtimeLodScale;
@@ -5684,11 +6050,19 @@ massArmy = new MassArmySystem(scene, {
   worldHalfDepth: WORLD.halfDepth,
 });
   multiplayer = new MultiplayerClient({
-    onSnapshot: (players) => massArmy.syncRemotePlayers(players, multiplayer.clientId),
+    onSnapshot: (players) => {
+      if (state.started) massArmy.syncRemotePlayers(players, multiplayer.clientId);
+      updateTeamCounts();
+      // Networked score/kills/deaths and team totals must be visible in the same
+      // snapshot tick instead of waiting for the minimap refresh cadence.
+      lastBoardUpdate = -Infinity;
+      updateMaps(true);
+    },
     onEvent: handleNetworkGameEvent,
     onWorldState: handleNetworkWorldState,
   onRejected: () => blockDuplicateSession(),
   onWelcome: ({ team }) => {
+    updateTeamCounts();
     if (!state.started || team === state.team) return;
     applyPlayerTeam(team);
     if (state.spawnSelecting) {
@@ -5709,6 +6083,7 @@ massArmy = new MassArmySystem(scene, {
     document.documentElement.dataset.network = status;
   },
 });
+multiplayer.observe();
 
 function findRockPassageForStance(stanceName = 'stand') {
   const profile = STANCE[stanceName] || STANCE.stand;
@@ -5833,6 +6208,7 @@ globalThis.__bibishDebug = {
     };
   },
   getNetworkMetrics: () => multiplayer?.getMetrics() || null,
+  getRemotePlayerById: (id) => massArmy?.getAgentInfoById(String(id || '')) || null,
   prepareNetworkEventTest: (x = 0, z = 0) => {
     if (!state.started) return null;
     playerPosition.x = THREE.MathUtils.clamp(Number(x) || 0, -WORLD.halfWidth + 20, WORLD.halfWidth - 20);
@@ -5917,9 +6293,12 @@ globalThis.__bibishDebug = {
   getGameplayConfig: () => ({
     npcPlayerCombatEnabled: false,
     paintRadiusMultiplier: PAINT_RADIUS_MULTIPLIER,
-    scopedBulletSpeed: 720,
-    hipBulletSpeed: 480,
-    scopedGravity: 1.35,
+    wastePaintRadius: JSON.parse(JSON.stringify(WASTE_PAINT_RADIUS)),
+    wasteRange: { ...WASTE_RANGE },
+    rifleBallistics: JSON.parse(JSON.stringify(RIFLE_BALLISTICS)),
+    scopedBulletSpeed: RIFLE_BALLISTICS.scoped.muzzleSpeed,
+    hipBulletSpeed: RIFLE_BALLISTICS.hip.muzzleSpeed,
+    scopedGravity: RIFLE_BALLISTICS.scoped.gravity,
     npcPerTeam: 0,
     world: { width: WORLD.halfWidth * 2, depth: WORLD.halfDepth * 2 },
     forts: fortData.length,
@@ -6240,14 +6619,104 @@ globalThis.__bibishDebug = {
     activeBallistics: ballisticPool.slots.filter((slot) => slot.active).length,
     activeTrails: beamPool.slots.filter((slot) => slot.active).length,
     activeGlobs: globPool.slots.filter((slot) => slot.active).length,
+    activePoop: poopPool.slots.filter((slot) => slot.active).length,
     swordX: viewModel.userData.sword.position.x,
     swordRotationZ: viewModel.userData.sword.rotation.z,
+    ballistics: ballisticPool.slots.filter((slot) => slot.active).map((slot) => ({
+      speed: slot.velocity.length(),
+      verticalSpeed: slot.velocity.y,
+      gravity: slot.gravity,
+      drag: slot.drag,
+      travelDistance: slot.travelDistance,
+    })),
   }),
+  getLastShotDiagnostics: () => lastShotDiagnostics ? JSON.parse(JSON.stringify(lastShotDiagnostics)) : null,
+  testCenteredShotAlignment: () => {
+    synchronizeAimCamera();
+    const centerDirection = rayDirection.clone();
+    const canvasBounds = renderer.domElement.getBoundingClientRect();
+    const sightBounds = (state.aiming ? scopeOverlay : crosshair).getBoundingClientRect();
+    const projected = camera.position.clone().addScaledVector(centerDirection, 100).project(camera);
+    const projectedX = canvasBounds.left + (projected.x + 1) * 0.5 * canvasBounds.width;
+    const projectedY = canvasBounds.top + (1 - projected.y) * 0.5 * canvasBounds.height;
+    const sightX = sightBounds.width > 0 ? sightBounds.left + sightBounds.width / 2 : canvasBounds.left + canvasBounds.width / 2;
+    const sightY = sightBounds.height > 0 ? sightBounds.top + sightBounds.height / 2 : canvasBounds.top + canvasBounds.height / 2;
+    const profile = state.aiming ? RIFLE_BALLISTICS.scoped : RIFLE_BALLISTICS.hip;
+    const sampleDistance = 100;
+    const reachableRatio = THREE.MathUtils.clamp(sampleDistance * profile.drag / profile.muzzleSpeed, 0, 0.98);
+    const flightTime = profile.drag > 0
+      ? -Math.log(1 - reachableRatio) / profile.drag
+      : sampleDistance / profile.muzzleSpeed;
+    const attenuation = Math.exp(-profile.drag * flightTime);
+    const estimatedDrop = profile.drag > 0
+      ? profile.gravity * (flightTime / profile.drag - (1 - attenuation) / (profile.drag * profile.drag))
+      : profile.gravity * flightTime * flightTime * 0.5;
+    return {
+      reticleErrorPixels: Math.hypot(projectedX - sightX, projectedY - sightY),
+      estimatedDropAt100m: estimatedDrop,
+      muzzleSpeed: profile.muzzleSpeed,
+      gravity: profile.gravity,
+      drag: profile.drag,
+      center: centerDirection.toArray(),
+      launch: centerDirection.toArray(),
+    };
+  },
+  fireBallisticProbe: (scoped = false) => {
+    const profile = scoped ? RIFLE_BALLISTICS.scoped : RIFLE_BALLISTICS.hip;
+    ballisticPool.fire(
+      new THREE.Vector3(0, 96, 0),
+      new THREE.Vector3(profile.muzzleSpeed, 0, 0),
+      0xffffff,
+      0.14,
+      profile.gravity,
+      profile.drag,
+    );
+    return { profile: scoped ? 'scoped' : 'hip', ...profile };
+  },
+  firePoopImpactProbe: () => {
+    const x = playerPosition.x + 2;
+    const z = playerPosition.z;
+    const groundY = terrainHeightAt(x, z);
+    poopPool.fire(
+      new THREE.Vector3(x, groundY + 1.2, z),
+      new THREE.Vector3(1.5, 0, 0),
+      WASTE_STYLE[state.team || 'red'].poop,
+    );
+    return { x, z, groundY };
+  },
+  triggerWasteEffect: (wasteType = 'pee') => {
+    const safeType = WASTE_TYPES.includes(wasteType) ? wasteType : 'pee';
+    state.mode = 1;
+    state.wasteIndex = WASTE_TYPES.indexOf(safeType);
+    state.pitch = Math.min(state.pitch, -0.28);
+    if (!state.thirdPerson) camera.position.set(playerPosition.x, state.feetY + state.currentEyeHeight, playerPosition.z);
+    synchronizeAimCamera();
+    const aimResult = rayFromCameraToGround(0, 0, WASTE_RANGE[safeType]);
+    if (safeType === 'pee') performPee(aimResult);
+    else if (safeType === 'vomit') performVomit(aimResult);
+    else {
+      const impact = aimResult?.hit?.point || camera.position.clone().addScaledVector(cameraRay(0, 0), 8);
+      impactProjectile(impact);
+    }
+    return {
+      type: safeType,
+      hit: Boolean(aimResult?.hit),
+      effects: globalThis.__bibishDebug.getEffectMetrics(),
+      territory: globalThis.__bibishDebug.getTerritoryMetrics(),
+    };
+  },
   getTerritoryMetrics: () => ({ unpainted: territoryCounts[0], red: territoryCounts[1], blue: territoryCounts[2] }),
   getCollisionMetrics: () => ({
     blockers: blockers.length,
     rockBlockers: blockers.filter((box) => box.kind === 'rock').length,
     bushBlockers: blockers.filter((box) => box.kind === 'bush').length,
+    openBottoms: blockers.filter((box) => {
+      const centerX = (box.minX + box.maxX) / 2;
+      const centerZ = (box.minZ + box.maxZ) / 2;
+      return box.terrainGrounded && box.minY > terrainHeightAt(centerX, centerZ) + 0.02;
+    }).length,
+    elevatedVolumes: blockers.filter((box) => !box.terrainGrounded).length,
+    invalidVolumes: blockers.filter((box) => box.minX >= box.maxX || box.minY >= box.maxY || box.minZ >= box.maxZ || box.polygon?.length < 3).length,
     bulletSurfaces: bulletSurfaces.length,
     gridCells: blockerGrid.size,
     sweptStep: Math.max(0.065, state.currentRadius * 0.28),
@@ -6406,6 +6875,61 @@ globalThis.__bibishDebug = {
       blocked: collidesStaticAt(playerPosition.x, playerPosition.z),
     };
   },
+  auditFortGate: (index = 0) => {
+    const fort = fortData[index];
+    if (!fort) return null;
+    const samples = [];
+    for (let signedDistance = fort.half - 11; signedDistance <= fort.half + 11; signedDistance += 0.25) {
+      const sampleX = fort.x;
+      const sampleZ = fort.z + fort.gateSide * signedDistance;
+      const feetY = floorHeightAt(sampleX, sampleZ, fort.y + 0.72, STANCE.stand.radius * 0.72);
+      samples.push({
+        signedDistance,
+        x: sampleX,
+        z: sampleZ,
+        feetY,
+        blocked: collidesStaticAt(sampleX, sampleZ, STANCE.stand.radius, feetY, STANCE.stand.body),
+      });
+    }
+    return {
+      fort: index,
+      gateWidth: fort.gateWidth,
+      clear: samples.every((sample) => !sample.blocked),
+      blockedSamples: samples.filter((sample) => sample.blocked),
+      samples,
+    };
+  },
+  prepareFortGateTraversal: (index = 0, direction = 'out') => {
+    const fort = fortData[index];
+    if (!fort) return null;
+    const outward = direction !== 'in';
+    const signedDistance = outward ? fort.half - 10 : fort.half + 10;
+    playerPosition.set(fort.x, fort.y, fort.z + fort.gateSide * signedDistance);
+    state.feetY = floorHeightAt(playerPosition.x, playerPosition.z);
+    state.velocityY = 0;
+    state.stance = 'stand';
+    state.currentEyeHeight = PLAYER.eyeHeight;
+    state.currentBodyHeight = PLAYER.bodyHeight;
+    state.currentRadius = STANCE.stand.radius;
+    state.canJump = true;
+    state.thirdPerson = false;
+    state.locked = true;
+    state.dead = false;
+    state.mapOpen = false;
+    state.keys.clear();
+    state.yaw = outward
+      ? (fort.gateSide === 1 ? Math.PI : 0)
+      : (fort.gateSide === 1 ? 0 : Math.PI);
+    state.pitch = 0;
+    camera.position.set(playerPosition.x, state.feetY + PLAYER.eyeHeight, playerPosition.z);
+    camera.rotation.set(0, state.yaw, 0);
+    return {
+      fort: index,
+      direction: outward ? 'out' : 'in',
+      start: playerPosition.toArray(),
+      targetSignedDistance: outward ? fort.half + 4 : fort.half - 4,
+    };
+  },
   queueFortJumpTest: () => {
     state.jumpQueued = 0.12;
     state.jumpGrace = 0.12;
@@ -6419,6 +6943,7 @@ globalThis.__bibishDebug = {
     ));
     if (!box) return null;
     const x = (box.minX + box.maxX) / 2;
+    const centerZ = (box.minZ + box.maxZ) / 2;
     const z = box.minZ - PLAYER.radius - 0.09;
     state.stance = 'stand';
     state.currentEyeHeight = PLAYER.eyeHeight;
@@ -6442,7 +6967,7 @@ globalThis.__bibishDebug = {
       player: playerPosition.toArray(),
       camera: camera.position.toArray(),
       outsideBlocked: collidesStaticAt(playerPosition.x, playerPosition.z),
-      insideBlocked: collidesStaticAt(x, box.minZ + PLAYER.radius * 0.25),
+      insideBlocked: collidesStaticAt(x, centerZ, PLAYER.radius, floorHeightAt(x, centerZ), PLAYER.bodyHeight),
       surfaceDistance: box.minZ - playerPosition.z,
     };
   },

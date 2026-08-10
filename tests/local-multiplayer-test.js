@@ -135,6 +135,17 @@ try {
     return current.lastNetworkEventId >= 2 && (current.redPaint > before.redPaint || current.bluePaint > before.bluePaint);
   }, sharedBefore[index], { timeout: 15000 })));
   const sharedAfter = await Promise.all(pages.map((page) => page.evaluate(() => globalThis.__bibishDebug.getSharedGameState())));
+  const expectedLiveScore = Math.round(sharedAfter[attackerIndex].score);
+  await pages[victimIndex].waitForFunction(({ playerName, score }) => {
+    const rows = [...document.querySelectorAll('#leaderboard > span')];
+    const row = rows.find((candidate) => candidate.querySelector('.leader-name')?.textContent === playerName);
+    return Number(row?.querySelector('.leader-score')?.textContent || -1) === score;
+  }, { playerName: 'Load-R-000', score: expectedLiveScore }, { timeout: 15000 });
+  const liveRemoteScore = await pages[victimIndex].evaluate((playerName) => {
+    const rows = [...document.querySelectorAll('#leaderboard > span')];
+    const row = rows.find((candidate) => candidate.querySelector('.leader-name')?.textContent === playerName);
+    return Number(row?.querySelector('.leader-score')?.textContent || -1);
+  }, 'Load-R-000');
 
   const clients = await Promise.all(pages.map((page, index) => page.evaluate((clientIndex) => ({
     index: clientIndex,
@@ -145,6 +156,48 @@ try {
   }), index).then((client) => ({ ...client, observedRemotePlayers: observedRemotePlayers[index] }))));
   const roomIds = new Set(clients.map((client) => client.network.roomId));
   const instanceIds = new Set(clients.map((client) => client.network.serverInstanceId));
+
+  const lobbyPage = await context.newPage();
+  lobbyPage.on('pageerror', (error) => pageErrors.push({ index: 'lobby', type: 'pageerror', message: error.message }));
+  lobbyPage.on('console', (message) => {
+    if (message.type() === 'error') pageErrors.push({ index: 'lobby', type: 'console', message: message.text() });
+  });
+  await lobbyPage.goto(`${baseUrl}/?localLobbyTest=lobby`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  try {
+    await lobbyPage.waitForFunction((expected) => {
+      const network = globalThis.__bibishDebug?.getNetworkMetrics?.();
+      const red = Number(document.querySelector('#menu-red-count')?.textContent || -1);
+      const blue = Number(document.querySelector('#menu-blue-count')?.textContent || -1);
+      return network?.connected === true && network?.joined === false
+        && network?.serverPlayerCount === expected && red + blue === expected;
+    }, CLIENT_COUNT, { timeout: 30000 });
+  } catch (error) {
+    const current = await lobbyPage.evaluate(() => ({
+      network: globalThis.__bibishDebug?.getNetworkMetrics?.(),
+      red: document.querySelector('#menu-red-count')?.textContent,
+      blue: document.querySelector('#menu-blue-count')?.textContent,
+      leaders: globalThis.__bibishDebug?.getSharedGameState?.().leaders,
+    }));
+    throw new Error(`Lobby roster did not become current: ${JSON.stringify(current)}\n${error.message}`);
+  }
+  const lobbyBeforeLeave = await lobbyPage.evaluate(() => ({
+    red: Number(document.querySelector('#menu-red-count')?.textContent || 0),
+    blue: Number(document.querySelector('#menu-blue-count')?.textContent || 0),
+    leaders: globalThis.__bibishDebug.getSharedGameState().leaders,
+  }));
+  await pages.at(-1).close();
+  await lobbyPage.waitForFunction((expected) => {
+    const network = globalThis.__bibishDebug?.getNetworkMetrics?.();
+    const red = Number(document.querySelector('#menu-red-count')?.textContent || -1);
+    const blue = Number(document.querySelector('#menu-blue-count')?.textContent || -1);
+    return network?.serverPlayerCount === expected && red + blue === expected
+      && globalThis.__bibishDebug.getSharedGameState().leaders === expected;
+  }, CLIENT_COUNT - 1, { timeout: 30000 });
+  const lobbyAfterLeave = await lobbyPage.evaluate(() => ({
+    red: Number(document.querySelector('#menu-red-count')?.textContent || 0),
+    blue: Number(document.querySelector('#menu-blue-count')?.textContent || 0),
+    leaders: globalThis.__bibishDebug.getSharedGameState().leaders,
+  }));
   const result = {
     passed: pageErrors.length === 0
       && server.players === CLIENT_COUNT
@@ -155,7 +208,12 @@ try {
       && clients.every((client) => client.network.connected)
       && clients.every((client) => client.network.serverPlayerCount === CLIENT_COUNT)
       && clients.every((client) => client.observedRemotePlayers)
-      && clients.every((client) => client.loadedLeaderboardFlags >= 1),
+      && clients.every((client) => client.loadedLeaderboardFlags >= 1)
+      && liveRemoteScore === expectedLiveScore
+      && lobbyBeforeLeave.red + lobbyBeforeLeave.blue === CLIENT_COUNT
+      && lobbyBeforeLeave.leaders === CLIENT_COUNT
+      && lobbyAfterLeave.red + lobbyAfterLeave.blue === CLIENT_COUNT - 1
+      && lobbyAfterLeave.leaders === CLIENT_COUNT - 1,
     url: baseUrl,
     tabs: CLIENT_COUNT,
     server: {
@@ -181,7 +239,10 @@ try {
       eventIds: sharedAfter.map((entry) => entry.lastNetworkEventId),
       paintChanged: sharedAfter.map((entry, index) => entry.redPaint > sharedBefore[index].redPaint || entry.bluePaint > sharedBefore[index].bluePaint),
       leaderboardSizes: sharedAfter.map((entry) => entry.leaders),
+      expectedLiveScore,
+      liveRemoteScore,
     },
+    liveLobby: { beforeLeave: lobbyBeforeLeave, afterLeave: lobbyAfterLeave },
     errors: pageErrors,
   };
   process.stdout.write(`BIBISH_LOCAL_MULTIPLAYER_RESULT ${JSON.stringify(result)}\n`);

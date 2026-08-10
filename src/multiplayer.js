@@ -1,4 +1,4 @@
-const SEND_INTERVAL = 1 / 12;
+const SEND_INTERVAL = 1 / 15;
 const PING_INTERVAL = 2;
 const RECONNECT_MAX_MS = 15000;
 const PUBLIC_MULTIPLAYER_URL = 'wss://bibish-realtime.bibish.workers.dev/ws';
@@ -73,6 +73,7 @@ export class MultiplayerClient {
     this.reconnectTimer = 0;
     this.closedByClient = false;
     this.connected = false;
+    this.joined = false;
     this.latencyMs = null;
     this.snapshotCount = 0;
     this.sentStateCount = 0;
@@ -87,12 +88,41 @@ export class MultiplayerClient {
   connect(profile) {
     this.profile = { ...profile };
     this.closedByClient = false;
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.sendJoin();
+      return;
+    }
+    if (this.socket?.readyState === WebSocket.CONNECTING) return;
     this.disconnect(false);
     this.open();
   }
 
+  observe() {
+    this.profile = null;
+    this.joined = false;
+    this.closedByClient = false;
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.send({ type: 'observe' });
+      return;
+    }
+    if (this.socket?.readyState === WebSocket.CONNECTING) return;
+    this.disconnect(false);
+    this.open();
+  }
+
+  sendJoin() {
+    if (!this.profile) return false;
+    return this.send({
+      type: 'join',
+      clientId: this.clientId,
+      deviceKey: this.deviceKey,
+      allowDuplicateDevice: this.allowDuplicateDevice,
+      ...this.profile,
+    });
+  }
+
   open() {
-    if (!this.profile || this.closedByClient) return;
+    if (this.closedByClient) return;
     this.onStatus?.('connecting');
     const socket = new WebSocket(websocketUrl());
     this.socket = socket;
@@ -101,13 +131,8 @@ export class MultiplayerClient {
       this.connected = true;
       this.reconnectDelay = 650;
       this.onStatus?.('online');
-      this.send({
-        type: 'join',
-        clientId: this.clientId,
-        deviceKey: this.deviceKey,
-        allowDuplicateDevice: this.allowDuplicateDevice,
-        ...this.profile,
-      });
+      if (this.profile) this.sendJoin();
+      else this.send({ type: 'observe' });
     });
     socket.addEventListener('message', (event) => {
       if (socket !== this.socket) return;
@@ -120,9 +145,13 @@ export class MultiplayerClient {
         this.onRejected?.(message.reason || 'duplicate-device');
         socket.close(4009, 'duplicate-device');
       } else if (message.type === 'welcome') {
+        this.joined = true;
         this.clientId = message.clientId || this.clientId;
         this.roomId = message.roomId || null;
         this.serverInstanceId = message.instanceId || null;
+        this.serverTeamCounts = message.counts || this.serverTeamCounts;
+        this.serverPlayerCount = Math.max(0,
+          (Number(this.serverTeamCounts.red) || 0) + (Number(this.serverTeamCounts.blue) || 0));
         this.onWelcome?.(message);
       } else if (message.type === 'snapshot' && Array.isArray(message.players)) {
         this.snapshotCount += 1;
@@ -142,6 +171,7 @@ export class MultiplayerClient {
     socket.addEventListener('close', () => {
       if (socket !== this.socket) return;
       this.connected = false;
+      this.joined = false;
       this.socket = null;
       this.onStatus?.('offline');
       if (this.closedByClient) return;
@@ -189,12 +219,14 @@ export class MultiplayerClient {
       socket.close(1000, 'client-left');
     }
     this.connected = false;
+    this.joined = false;
     this.onStatus?.('offline');
   }
 
   getMetrics() {
     return {
       connected: this.connected,
+      joined: this.joined,
       clientId: this.clientId,
       latencyMs: this.latencyMs == null ? null : Math.round(this.latencyMs),
       snapshots: this.snapshotCount,

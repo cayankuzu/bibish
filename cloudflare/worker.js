@@ -1,4 +1,4 @@
-const SNAPSHOT_INTERVAL_MS = 250;
+const SNAPSHOT_INTERVAL_MS = 125;
 const MAX_NAME_LENGTH = 18;
 const WORLD_HALF_WIDTH = 720;
 const WORLD_HALF_DEPTH = 720;
@@ -230,6 +230,18 @@ export class GameRoom {
 
     let message;
     try { message = JSON.parse(decodeMessage(raw)); } catch { return; }
+    if (message.type === 'observe') {
+      const allPlayers = [...this.players.values()];
+      this.send(socket, {
+        type: 'snapshot',
+        serverTime: Date.now(),
+        counts: this.teamCounts(),
+        totalPlayers: allPlayers.length,
+        leaders: this.leaderboard(allPlayers),
+        players: [],
+      });
+      return;
+    }
     if (message.type === 'join') {
       this.join(socket, message);
       return;
@@ -482,9 +494,10 @@ export class GameRoom {
     const grid = this.buildInterestGrid(allPlayers);
     const leaders = this.leaderboard(allPlayers);
     const serverTime = Date.now();
-    for (const [socket, viewer] of this.players.entries()) {
+    for (const socket of this.ctx.getWebSockets()) {
       if (socket.readyState !== WebSocket.OPEN) continue;
-      const visiblePlayers = this.interestedPlayers(viewer, grid);
+      const viewer = this.players.get(socket);
+      const visiblePlayers = viewer ? this.interestedPlayers(viewer, grid) : [];
       if (!this.send(socket, {
         type: 'snapshot',
         serverTime,

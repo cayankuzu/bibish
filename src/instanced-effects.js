@@ -177,14 +177,20 @@ export class GlobPool extends TimedInstancePool {
     scene.add(mesh);
   }
 
-  add(start, end, color, size = 0.18) {
+  add(start, end, color, size = 0.18, options = {}) {
     const { slot, index } = this.acquire();
     slot.active = true;
-    slot.life = 0.3;
-    slot.maxLife = 0.3;
+    slot.duration = THREE.MathUtils.clamp(Number(options.duration) || 0.3, 0.08, 1.2);
+    slot.delay = THREE.MathUtils.clamp(Number(options.delay) || 0, 0, 0.45);
+    slot.age = -slot.delay;
+    slot.life = slot.duration + slot.delay;
+    slot.maxLife = slot.life;
     slot.start = slot.start?.copy(start) || start.clone();
     slot.end = slot.end?.copy(end) || end.clone();
     slot.size = size;
+    slot.arcHeight = Number.isFinite(Number(options.arcHeight)) ? Number(options.arcHeight) : 0.35;
+    slot.gravityDrop = Math.max(0, Number(options.gravityDrop) || 0);
+    slot.endScale = THREE.MathUtils.clamp(Number(options.endScale) || 0.25, 0.08, 1);
     this.mesh.setColorAt(index, new THREE.Color(color));
     this.commit();
   }
@@ -195,16 +201,25 @@ export class GlobPool extends TimedInstancePool {
       const slot = this.slots[i];
       if (!slot.active) continue;
       changed = true;
-      slot.life -= delta;
-      if (slot.life <= 0) {
+      slot.age += delta;
+      slot.life = slot.duration - slot.age;
+      if (slot.age < 0) {
+        this.dummy.position.copy(slot.start);
+        this.dummy.quaternion.identity();
+        this.dummy.scale.copy(ZERO_SCALE);
+        this.dummy.updateMatrix();
+        this.mesh.setMatrixAt(i, this.dummy.matrix);
+        continue;
+      }
+      if (slot.age >= slot.duration) {
         this.hide(i, slot);
         continue;
       }
-      const t = 1 - slot.life / slot.maxLife;
+      const t = THREE.MathUtils.clamp(slot.age / slot.duration, 0, 1);
       this.dummy.position.lerpVectors(slot.start, slot.end, t);
-      this.dummy.position.y += Math.sin(t * Math.PI) * 0.35;
+      this.dummy.position.y += Math.sin(t * Math.PI) * slot.arcHeight - t * t * slot.gravityDrop;
       this.dummy.quaternion.identity();
-      this.dummy.scale.setScalar(slot.size * Math.max(0.25, slot.life / slot.maxLife));
+      this.dummy.scale.setScalar(slot.size * THREE.MathUtils.lerp(1, slot.endScale, t));
       this.dummy.updateMatrix();
       this.mesh.setMatrixAt(i, this.dummy.matrix);
     }
@@ -224,7 +239,7 @@ export class BallisticPool extends TimedInstancePool {
     scene.add(mesh);
   }
 
-  fire(position, velocity, color, size = 0.13, gravity = 9.81) {
+  fire(position, velocity, color, size = 0.13, gravity = 9.81, drag = 0.04) {
     const { slot, index } = this.acquire();
     slot.active = true;
     slot.life = 4;
@@ -233,6 +248,7 @@ export class BallisticPool extends TimedInstancePool {
     slot.velocity = slot.velocity?.copy(velocity) || velocity.clone();
     slot.size = size;
     slot.gravity = gravity;
+    slot.drag = Math.max(0, Number(drag) || 0);
     slot.travelDistance = 0;
     slot.color = slot.color?.set(color) || new THREE.Color(color);
     this.mesh.setColorAt(index, slot.color);
@@ -248,8 +264,21 @@ export class BallisticPool extends TimedInstancePool {
       slot.life -= delta;
       slot.previous.copy(slot.position);
       // Paintball yüksek çıkış hızında ilk bölümde neredeyse düz gider, uzakta doğal olarak düşer.
-      slot.velocity.y -= slot.gravity * delta;
-      slot.position.addScaledVector(slot.velocity, delta);
+      // Exact integration for linear aerodynamic drag plus gravity. This keeps
+      // speed loss and drop consistent across different frame rates.
+      if (slot.drag > 0.00001) {
+        const attenuation = Math.exp(-slot.drag * delta);
+        const velocityScale = (1 - attenuation) / slot.drag;
+        const gravityPositionScale = delta / slot.drag - (1 - attenuation) / (slot.drag * slot.drag);
+        slot.position.addScaledVector(slot.velocity, velocityScale);
+        slot.position.y -= slot.gravity * gravityPositionScale;
+        slot.velocity.multiplyScalar(attenuation);
+        slot.velocity.y -= slot.gravity * velocityScale;
+      } else {
+        slot.position.addScaledVector(slot.velocity, delta);
+        slot.position.y -= slot.gravity * delta * delta * 0.5;
+        slot.velocity.y -= slot.gravity * delta;
+      }
       slot.travelDistance += slot.previous.distanceTo(slot.position);
       const hit = collisionTest(slot.previous, slot.position);
       if (hit) {
@@ -326,9 +355,10 @@ export class PoopPool extends TimedInstancePool {
             slot.velocity.addScaledVector(hit.normal, 1.2);
           } else {
             onImpact(hit.point, hit.normal);
-            slot.mode = 'pile';
-            slot.life = 8;
-            slot.position.copy(hit.point).addScaledVector(hit.normal, 0.28);
+            // The intact projectile disappears on impact; the caller creates
+            // separate tumbling chunks and ground splatters from the hit point.
+            this.hide(i, slot);
+            continue;
           }
         }
       }

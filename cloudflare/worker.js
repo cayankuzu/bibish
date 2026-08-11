@@ -9,6 +9,7 @@ const MAX_MESSAGE_BYTES = 8 * 1024;
 const MAX_MESSAGES_PER_SECOND = 40;
 const ROOM_ID = 'global';
 const PAINT_HISTORY_LIMIT = 1000;
+const WORLD_STATE_SCHEMA_VERSION = 1;
 const DEATH_SCORE_PENALTY = 25;
 const FORTS = [
   { x: -510, z: -450, team: 'red' }, { x: -255, z: -490, team: 'red' },
@@ -57,6 +58,7 @@ function publicPlayer(player) {
 export class GameRoom {
   constructor(ctx) {
     this.ctx = ctx;
+    this.sql = ctx.storage.sql;
     this.players = new Map();
     this.deviceSessions = new Map();
     this.snapshotTimer = null;
@@ -80,6 +82,13 @@ export class GameRoom {
       rateLimitedMessages: 0,
     };
 
+    // A Durable Object's RAM is discarded during deployments and normal
+    // eviction. Keep the authoritative world in the object's SQLite storage
+    // and rebuild the hot in-memory copy before accepting any request.
+    // SQLite operations are synchronous inside a Durable Object, so schema
+    // creation and hydration finish atomically before this constructor returns.
+    this.restorePersistentWorld();
+
     for (const socket of this.ctx.getWebSockets()) {
       const attachment = socket.deserializeAttachment?.();
       if (!attachment?.player) continue;
@@ -87,6 +96,108 @@ export class GameRoom {
       if (attachment.player.deviceKey) this.deviceSessions.set(attachment.player.deviceKey, socket);
     }
     if (this.ctx.getWebSockets().length) this.startSnapshotLoop();
+  }
+
+  restorePersistentWorld() {
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS world_meta (
+        key TEXT PRIMARY KEY,
+        value INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS paint_events (
+        event_id INTEGER PRIMARY KEY,
+        source_id TEXT NOT NULL,
+        team TEXT NOT NULL,
+        waste_type TEXT NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        z REAL NOT NULL,
+        radius REAL NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS fort_owners (
+        fort_index INTEGER PRIMARY KEY,
+        team TEXT NOT NULL
+      );
+    `);
+
+    this.paintHistory = this.sql.exec(`
+      SELECT event_id, source_id, team, waste_type, x, y, z, radius
+      FROM paint_events
+      ORDER BY event_id ASC
+    `).toArray().map((row) => ({
+      kind: 'paint',
+      eventId: Number(row.event_id),
+      sourceId: String(row.source_id),
+      team: cleanTeam(row.team),
+      wasteType: ['pee', 'vomit', 'poop'].includes(row.waste_type) ? row.waste_type : 'pee',
+      x: Number(row.x),
+      y: Number(row.y),
+      z: Number(row.z),
+      radius: Number(row.radius),
+    }));
+
+    for (const row of this.sql.exec('SELECT fort_index, team FROM fort_owners')) {
+      const index = Math.round(Number(row.fort_index));
+      if (index >= 0 && index < this.fortOwners.length) this.fortOwners[index] = cleanTeam(row.team);
+    }
+
+    const metaRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'event_sequence'").toArray();
+    const storedSequence = Number(metaRows[0]?.value) || 0;
+    const latestPaintSequence = Number(this.paintHistory.at(-1)?.eventId) || 0;
+    // Wall-clock seeding guarantees that clients which stayed open across a
+    // deployment never reject new events as older duplicate sequence IDs.
+    this.eventSequence = Math.max(storedSequence, latestPaintSequence, Date.now() * 1000);
+    this.sql.exec(
+      'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
+      'schema_version',
+      WORLD_STATE_SCHEMA_VERSION,
+    );
+  }
+
+  nextEventId() {
+    this.eventSequence = Math.max(this.eventSequence + 1, Date.now() * 1000);
+    return this.eventSequence;
+  }
+
+  persistEventSequence() {
+    this.sql.exec(
+      'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
+      'event_sequence',
+      this.eventSequence,
+    );
+  }
+
+  persistPaintEvent(event) {
+    this.sql.exec(
+      `INSERT OR REPLACE INTO paint_events
+        (event_id, source_id, team, waste_type, x, y, z, radius)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      event.eventId,
+      event.sourceId,
+      event.team,
+      event.wasteType,
+      event.x,
+      event.y,
+      event.z,
+      event.radius,
+    );
+    this.sql.exec(
+      `DELETE FROM paint_events
+       WHERE event_id NOT IN (
+         SELECT event_id FROM paint_events ORDER BY event_id DESC LIMIT ?
+       )`,
+      PAINT_HISTORY_LIMIT,
+    );
+    this.persistEventSequence();
+  }
+
+  persistFortOwner(fortIndex, team) {
+    this.sql.exec(
+      'INSERT OR REPLACE INTO fort_owners (fort_index, team) VALUES (?, ?)',
+      fortIndex,
+      team,
+    );
+    this.persistEventSequence();
   }
 
   async fetch(request) {
@@ -308,7 +419,7 @@ export class GameRoom {
       if (!wasteType) return;
       const event = {
         kind,
-        eventId: ++this.eventSequence,
+        eventId: this.nextEventId(),
         sourceId: player.id,
         team: player.team,
         wasteType,
@@ -321,6 +432,7 @@ export class GameRoom {
       if (this.paintHistory.length > PAINT_HISTORY_LIMIT) {
         this.paintHistory.splice(0, this.paintHistory.length - PAINT_HISTORY_LIMIT);
       }
+      this.persistPaintEvent(event);
       this.broadcast({ type: 'game-event', event });
       return;
     }
@@ -338,9 +450,11 @@ export class GameRoom {
       }
       if (allies <= enemies || this.fortOwners[fortIndex] === player.team) return;
       this.fortOwners[fortIndex] = player.team;
+      const eventId = this.nextEventId();
+      this.persistFortOwner(fortIndex, player.team);
       this.broadcast({
         type: 'game-event',
-        event: { kind, eventId: ++this.eventSequence, sourceId: player.id, fortIndex, team: player.team },
+        event: { kind, eventId, sourceId: player.id, fortIndex, team: player.team },
       });
       return;
     }
@@ -366,7 +480,7 @@ export class GameRoom {
       this.broadcast({
         type: 'game-event',
         event: {
-          kind: 'blocked', eventId: ++this.eventSequence, sourceId: player.id,
+          kind: 'blocked', eventId: this.nextEventId(), sourceId: player.id,
           targetId: target.id, source: [player.x, player.y, player.z],
         },
       });
@@ -400,7 +514,7 @@ export class GameRoom {
     this.broadcast({
       type: 'game-event',
       event: {
-        kind, eventId: ++this.eventSequence, sourceId: player.id, targetId: target.id,
+        kind, eventId: this.nextEventId(), sourceId: player.id, targetId: target.id,
         source: [player.x, player.y, player.z], weapon, zone, distance,
         damage: appliedDamage, health: target.health, killed,
         attacker: { id: player.id, name: player.name, team: player.team, countryCode: player.countryCode },
@@ -446,6 +560,8 @@ export class GameRoom {
       paint: this.paintHistory,
       forts: this.fortOwners,
       eventSequence: this.eventSequence,
+      persisted: true,
+      schemaVersion: WORLD_STATE_SCHEMA_VERSION,
     });
   }
 
@@ -545,6 +661,8 @@ export class GameRoom {
       instanceId: this.instanceId,
       teams: counts,
       uptimeSeconds: Math.round((Date.now() - this.startedAt) / 1000),
+      persistedPaintEvents: this.paintHistory.length,
+      worldStateSchemaVersion: WORLD_STATE_SCHEMA_VERSION,
       snapshotHz: 1000 / SNAPSHOT_INTERVAL_MS,
       interestRadius: INTEREST_RADIUS,
       maxInterestPlayers: MAX_INTEREST_PLAYERS,

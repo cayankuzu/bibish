@@ -44,7 +44,12 @@ function publicPlayer(player) {
   ];
 }
 
-export function createGameRoom({ now = () => Date.now(), worldStartedAt: configuredWorldStartedAt = null } = {}) {
+export function createGameRoom({
+  now = () => Date.now(),
+  worldStartedAt: configuredWorldStartedAt = null,
+  worldActiveElapsedMs: configuredWorldActiveElapsedMs = null,
+  persistWorldClock = null,
+} = {}) {
   const sockets = new Set();
   const players = new Map();
   const deviceSessions = new Map();
@@ -62,10 +67,52 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
   let outboundBytes = 0;
   let dirty = true;
   const startedAt = performance.now();
-  const worldStartedAt = Number(configuredWorldStartedAt) > 0 ? Number(configuredWorldStartedAt) : now();
+  let worldActiveElapsedMs = Number(configuredWorldActiveElapsedMs);
+  if (!Number.isFinite(worldActiveElapsedMs) || worldActiveElapsedMs < 0) {
+    worldActiveElapsedMs = Number(configuredWorldStartedAt) > 0
+      ? Math.max(0, now() - Number(configuredWorldStartedAt))
+      : 0;
+  }
+  let worldRunningSince = null;
+  let lastWorldClockPersistAt = 0;
   const startedCpu = process.cpuUsage();
   const eventLoopDelay = monitorEventLoopDelay({ resolution: 20 });
   eventLoopDelay.enable();
+
+  function worldClockSnapshot(at = now()) {
+    const elapsedMs = Math.max(0, worldActiveElapsedMs
+      + (worldRunningSince === null ? 0 : Math.max(0, at - worldRunningSince)));
+    return {
+      worldStartedAt: at - elapsedMs,
+      worldActiveElapsedMs: elapsedMs,
+      worldClockRunning: worldRunningSince !== null,
+      serverTime: at,
+    };
+  }
+
+  function saveWorldClock(force = false) {
+    if (typeof persistWorldClock !== 'function') return;
+    const clock = worldClockSnapshot();
+    if (!force && clock.serverTime - lastWorldClockPersistAt < 1000) return;
+    lastWorldClockPersistAt = clock.serverTime;
+    persistWorldClock({
+      activeElapsedMs: clock.worldActiveElapsedMs,
+      running: clock.worldClockRunning,
+      savedAt: clock.serverTime,
+    });
+  }
+
+  function synchronizeWorldClock() {
+    const clockNow = now();
+    if (players.size > 0 && worldRunningSince === null) {
+      worldRunningSince = clockNow;
+      saveWorldClock(true);
+    } else if (players.size === 0 && worldRunningSince !== null) {
+      worldActiveElapsedMs += Math.max(0, clockNow - worldRunningSince);
+      worldRunningSince = null;
+      saveWorldClock(true);
+    }
+  }
 
   function teamCounts() {
     let red = 0;
@@ -160,6 +207,7 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
   }
 
   function broadcastSnapshot(force = false) {
+    saveWorldClock();
     if (!force && !dirty) return;
     dirty = false;
     const counts = teamCounts();
@@ -167,7 +215,7 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
     const grid = buildInterestGrid(allPlayers);
     const leaders = leaderboard(allPlayers);
     const teamStats = teamStatistics(allPlayers);
-    const serverTime = now();
+    const clock = worldClockSnapshot();
     for (const socket of sockets) {
       if (socket.readyState !== 1) continue;
       if (socket.bufferedAmount > MAX_BUFFERED_BYTES) {
@@ -178,8 +226,7 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
       const visiblePlayers = viewer ? interestedPlayers(viewer, allPlayers, grid) : [];
       const message = JSON.stringify({
         type: 'snapshot',
-        serverTime,
-        worldStartedAt,
+        ...clock,
         counts,
         totalPlayers: allPlayers.length,
         leaders,
@@ -309,10 +356,10 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
       try { message = JSON.parse(String(raw)); } catch { return; }
       if (message.type === 'observe') {
         const allPlayers = [...players.values()];
+        const clock = worldClockSnapshot();
         send(socket, {
           type: 'snapshot',
-          serverTime: now(),
-          worldStartedAt,
+          ...clock,
           counts: teamCounts(),
           totalPlayers: allPlayers.length,
           leaders: leaderboard(allPlayers),
@@ -354,20 +401,21 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
           fullRoster: process.env.BIBISH_ALLOW_FULL_ROSTER === '1' && Boolean(message.loadTestFullRoster),
         };
         players.set(socket, player);
+        synchronizeWorldClock();
         dirty = true;
+        const clock = worldClockSnapshot();
         send(socket, {
           type: 'welcome',
           clientId: player.id,
           team,
           roomId: GLOBAL_ROOM_ID,
           instanceId: SERVER_INSTANCE_ID,
-          worldStartedAt,
-          serverTime: now(),
+          ...clock,
           counts: teamCounts(),
           teamStats: teamStatistics(),
           snapshotHz: 1000 / SNAPSHOT_INTERVAL_MS,
         });
-        send(socket, { type: 'world-state', paint: paintHistory, forts: fortOwners, eventSequence, worldStartedAt, serverTime: now() });
+        send(socket, { type: 'world-state', paint: paintHistory, forts: fortOwners, eventSequence, ...clock });
         return;
       }
       const player = players.get(socket);
@@ -418,7 +466,10 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
       sockets.delete(socket);
       const player = players.get(socket);
       if (player?.deviceKey && deviceSessions.get(player.deviceKey) === socket) deviceSessions.delete(player.deviceKey);
-      if (players.delete(socket)) dirty = true;
+      if (players.delete(socket)) {
+        synchronizeWorldClock();
+        dirty = true;
+      }
     });
   }
 
@@ -450,7 +501,7 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
         activeDevices: deviceSessions.size,
         roomId: GLOBAL_ROOM_ID,
         instanceId: SERVER_INSTANCE_ID,
-        worldStartedAt,
+        ...worldClockSnapshot(),
         teams: teamCounts(),
         totalConnections,
         inboundMessages,
@@ -473,6 +524,11 @@ export function createGameRoom({ now = () => Date.now(), worldStartedAt: configu
       };
     },
     close: () => {
+      if (worldRunningSince !== null) {
+        worldActiveElapsedMs += Math.max(0, now() - worldRunningSince);
+        worldRunningSince = null;
+      }
+      saveWorldClock(true);
       clearInterval(snapshotTimer);
       clearInterval(heartbeatTimer);
       eventLoopDelay.disable();

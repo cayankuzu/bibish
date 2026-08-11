@@ -9,7 +9,7 @@ const MAX_MESSAGE_BYTES = 8 * 1024;
 const MAX_MESSAGES_PER_SECOND = 40;
 const ROOM_ID = 'global';
 const PAINT_HISTORY_LIMIT = 1000;
-const WORLD_STATE_SCHEMA_VERSION = 2;
+const WORLD_STATE_SCHEMA_VERSION = 3;
 const DEATH_SCORE_PENALTY = 25;
 const FORTS = [
   { x: -510, z: -450, team: 'red' }, { x: -255, z: -490, team: 'red' },
@@ -67,7 +67,8 @@ export class GameRoom {
     this.eventSequence = 0;
     this.dirty = false;
     this.startedAt = Date.now();
-    this.worldStartedAt = null;
+    this.worldActiveElapsedMs = 0;
+    this.worldRunningSince = null;
     this.instanceId = `do-${ctx.id.toString().slice(0, 20)}`;
     this.metrics = {
       totalConnections: 0,
@@ -96,6 +97,7 @@ export class GameRoom {
       this.players.set(socket, attachment.player);
       if (attachment.player.deviceKey) this.deviceSessions.set(attachment.player.deviceKey, socket);
     }
+    this.synchronizeWorldClock();
     if (this.ctx.getWebSockets().length) this.startSnapshotLoop();
   }
 
@@ -148,18 +150,56 @@ export class GameRoom {
     // Wall-clock seeding guarantees that clients which stayed open across a
     // deployment never reject new events as older duplicate sequence IDs.
     this.eventSequence = Math.max(storedSequence, latestPaintSequence, Date.now() * 1000);
-    const worldStartRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'world_started_at'").toArray();
-    this.worldStartedAt = Math.max(1, Number(worldStartRows[0]?.value) || Date.now());
-    this.sql.exec(
-      'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
-      'world_started_at',
-      this.worldStartedAt,
-    );
+    const activeElapsedRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'world_active_elapsed_ms'").toArray();
+    const runningSinceRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'world_clock_running_since'").toArray();
+    if (activeElapsedRows.length) {
+      this.worldActiveElapsedMs = Math.max(0, Number(activeElapsedRows[0]?.value) || 0);
+      this.worldRunningSince = Math.max(0, Number(runningSinceRows[0]?.value) || 0) || null;
+    } else {
+      const worldStartRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'world_started_at'").toArray();
+      const legacyWorldStartedAt = Math.max(1, Number(worldStartRows[0]?.value) || Date.now());
+      this.worldActiveElapsedMs = Math.max(0, Date.now() - legacyWorldStartedAt);
+      this.worldRunningSince = null;
+    }
+    this.persistWorldClock();
     this.sql.exec(
       'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
       'schema_version',
       WORLD_STATE_SCHEMA_VERSION,
     );
+  }
+
+  worldClockSnapshot(at = Date.now()) {
+    const elapsedMs = Math.max(0, this.worldActiveElapsedMs
+      + (this.worldRunningSince === null ? 0 : Math.max(0, at - this.worldRunningSince)));
+    return {
+      worldStartedAt: at - elapsedMs,
+      worldActiveElapsedMs: elapsedMs,
+      worldClockRunning: this.worldRunningSince !== null,
+      serverTime: at,
+    };
+  }
+
+  persistWorldClock() {
+    const clock = this.worldClockSnapshot();
+    this.sql.exec(
+      'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?), (?, ?), (?, ?)',
+      'world_active_elapsed_ms', Math.round(this.worldActiveElapsedMs),
+      'world_clock_running_since', Math.round(this.worldRunningSince || 0),
+      'world_started_at', Math.round(clock.worldStartedAt),
+    );
+  }
+
+  synchronizeWorldClock() {
+    const clockNow = Date.now();
+    if (this.players.size > 0 && this.worldRunningSince === null) {
+      this.worldRunningSince = clockNow;
+      this.persistWorldClock();
+    } else if (this.players.size === 0 && this.worldRunningSince !== null) {
+      this.worldActiveElapsedMs += Math.max(0, clockNow - this.worldRunningSince);
+      this.worldRunningSince = null;
+      this.persistWorldClock();
+    }
   }
 
   nextEventId() {
@@ -367,10 +407,10 @@ export class GameRoom {
     try { message = JSON.parse(decodeMessage(raw)); } catch { return; }
     if (message.type === 'observe') {
       const allPlayers = [...this.players.values()];
+      const clock = this.worldClockSnapshot();
       this.send(socket, {
         type: 'snapshot',
-        serverTime: Date.now(),
-        worldStartedAt: this.worldStartedAt,
+        ...clock,
         counts: this.teamCounts(),
         totalPlayers: allPlayers.length,
         leaders: this.leaderboard(allPlayers),
@@ -568,18 +608,19 @@ export class GameRoom {
     const player = this.playerForJoin(message);
     if (previous) player.team = previous.team;
     this.players.set(socket, player);
+    this.synchronizeWorldClock();
     const attachment = socket.deserializeAttachment?.() || {};
     attachment.player = player;
     socket.serializeAttachment(attachment);
     this.dirty = true;
+    const clock = this.worldClockSnapshot();
     this.send(socket, {
       type: 'welcome',
       clientId: player.id,
       team: player.team,
       roomId: ROOM_ID,
       instanceId: this.instanceId,
-      worldStartedAt: this.worldStartedAt,
-      serverTime: Date.now(),
+      ...clock,
       counts: this.teamCounts(),
       teamStats: this.teamStatistics(),
       snapshotHz: 1000 / SNAPSHOT_INTERVAL_MS,
@@ -589,8 +630,7 @@ export class GameRoom {
       paint: this.paintHistory,
       forts: this.fortOwners,
       eventSequence: this.eventSequence,
-      worldStartedAt: this.worldStartedAt,
-      serverTime: Date.now(),
+      ...clock,
       persisted: true,
       schemaVersion: WORLD_STATE_SCHEMA_VERSION,
     });
@@ -641,15 +681,14 @@ export class GameRoom {
     const grid = this.buildInterestGrid(allPlayers);
     const leaders = this.leaderboard(allPlayers);
     const teamStats = this.teamStatistics(allPlayers);
-    const serverTime = Date.now();
+    const clock = this.worldClockSnapshot();
     for (const socket of this.ctx.getWebSockets()) {
       if (socket.readyState !== WebSocket.OPEN) continue;
       const viewer = this.players.get(socket);
       const visiblePlayers = viewer ? this.interestedPlayers(viewer, grid) : [];
       if (!this.send(socket, {
         type: 'snapshot',
-        serverTime,
-        worldStartedAt: this.worldStartedAt,
+        ...clock,
         counts,
         totalPlayers: allPlayers.length,
         leaders,
@@ -670,7 +709,10 @@ export class GameRoom {
     if (player?.deviceKey && this.deviceSessions.get(player.deviceKey) === socket) {
       this.deviceSessions.delete(player.deviceKey);
     }
-    if (this.players.delete(socket)) this.dirty = true;
+    if (this.players.delete(socket)) {
+      this.synchronizeWorldClock();
+      this.dirty = true;
+    }
     if (!this.ctx.getWebSockets().some((candidate) => candidate.readyState === WebSocket.OPEN)) {
       clearInterval(this.snapshotTimer);
       this.snapshotTimer = null;
@@ -693,7 +735,7 @@ export class GameRoom {
       activeDevices: this.deviceSessions.size,
       roomId: ROOM_ID,
       instanceId: this.instanceId,
-      worldStartedAt: this.worldStartedAt,
+      ...this.worldClockSnapshot(),
       teams: counts,
       uptimeSeconds: Math.round((Date.now() - this.startedAt) / 1000),
       persistedPaintEvents: this.paintHistory.length,

@@ -1,14 +1,18 @@
 import { defineConfig } from 'vite';
 import { WebSocketServer } from 'ws';
 import { createGameRoom } from './server/game-room.js';
-import { loadPersistentLocalWorldStartedAt } from './server/local-world-clock.js';
+import { loadPersistentLocalWorldClock } from './server/local-world-clock.js';
 
 function localMultiplayer() {
   return {
     name: 'bibish-local-multiplayer',
     apply: 'serve',
     configureServer(server) {
-      const room = createGameRoom({ worldStartedAt: loadPersistentLocalWorldStartedAt() });
+      const localWorldClock = loadPersistentLocalWorldClock();
+      const room = createGameRoom({
+        worldActiveElapsedMs: localWorldClock.activeElapsedMs,
+        persistWorldClock: localWorldClock.persist,
+      });
       const websocketServer = new WebSocketServer({ noServer: true });
       websocketServer.on('connection', (socket) => room.attach(socket));
 

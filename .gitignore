@@ -5,6 +5,7 @@ test-results/
 verification-*.png
 production-*.png
 .vercel/
+.bibish-data/
 .codex-*.png
 .env
 .env.*

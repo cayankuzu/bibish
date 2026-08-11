@@ -618,8 +618,10 @@ const matchHistoryCount = document.querySelector('#match-history-count');
 const matchDetailsScreen = document.querySelector('#match-details-screen');
 const endMapCanvas = document.querySelector('#end-map-canvas');
 const historyMapCanvas = document.querySelector('#history-map-canvas');
-let worldStartedAt = Date.now();
 let worldServerOffsetMs = 0;
+let worldActiveElapsedMs = 0;
+let worldClockRunning = false;
+let worldClockSyncedAt = Date.now();
 
 const scene = new THREE.Scene();
 // Hafif turkuaz-gri gökyüzü ve nemli ufuk, yoğun bitki örtüsüne savaş filmi atmosferi verir.
@@ -912,23 +914,38 @@ function formatWorldAge(totalSeconds) {
 
 let lastWorldAgeSecond = -1;
 const worldClockNow = () => Date.now() + worldServerOffsetMs;
+function currentWorldElapsedMs() {
+  return Math.max(0, worldActiveElapsedMs
+    + (worldClockRunning ? Math.max(0, worldClockNow() - worldClockSyncedAt) : 0));
+}
+
 function updateWorldAgeDisplay(force = false) {
-  const elapsed = Math.max(0, Math.floor((worldClockNow() - worldStartedAt) / 1000));
+  const elapsed = Math.floor(currentWorldElapsedMs() / 1000);
   if (!force && elapsed === lastWorldAgeSecond) return;
   lastWorldAgeSecond = elapsed;
   worldAgeValue.textContent = formatWorldAge(elapsed);
 }
 
-function acceptWorldStartedAt(value, serverTime = null) {
-  const timestamp = Number(value);
-  const authoritativeNow = Number(serverTime);
+function acceptWorldClock(message = {}) {
+  const timestamp = Number(message.worldStartedAt);
+  const authoritativeNow = Number(message.serverTime);
   if (Number.isFinite(authoritativeNow) && authoritativeNow > 0) worldServerOffsetMs = authoritativeNow - Date.now();
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return;
-  if (timestamp !== worldStartedAt) {
-    worldStartedAt = timestamp;
-    lastWorldAgeSecond = -1;
-    updateWorldAgeDisplay(true);
+  const syncedAt = Number.isFinite(authoritativeNow) && authoritativeNow > 0 ? authoritativeNow : worldClockNow();
+  const activeElapsed = message.worldActiveElapsedMs == null ? Number.NaN : Number(message.worldActiveElapsedMs);
+  if (Number.isFinite(activeElapsed) && activeElapsed >= 0) {
+    worldActiveElapsedMs = activeElapsed;
+    worldClockRunning = Boolean(message.worldClockRunning);
+    worldClockSyncedAt = syncedAt;
+  } else if (Number.isFinite(timestamp) && timestamp > 0) {
+    // Eski sunucu sürümleriyle geçici geriye dönük uyumluluk.
+    worldActiveElapsedMs = Math.max(0, syncedAt - timestamp);
+    worldClockRunning = true;
+    worldClockSyncedAt = syncedAt;
+  } else {
+    return;
   }
+  lastWorldAgeSecond = -1;
+  updateWorldAgeDisplay(true);
 }
 
 function formatMatchDate(timestamp) {
@@ -1011,6 +1028,7 @@ function matchTeamStatistics(leaders = [], source = null, counts = null) {
 
 function createMatchRecord(winner, reasonKey = 'territory') {
   const endedAt = worldClockNow();
+  const matchDurationMs = currentWorldElapsedMs();
   const total = Math.max(1, paintableTerritoryCount);
   const redPaint = territoryCounts[1] / total * 100;
   const bluePaint = territoryCounts[2] / total * 100;
@@ -1019,8 +1037,8 @@ function createMatchRecord(winner, reasonKey = 'territory') {
   return {
     id: `match-${endedAt}-${Math.random().toString(36).slice(2, 8)}`,
     endedAt,
-    worldStartedAt,
-    durationSeconds: Math.max(0, Math.round((endedAt - worldStartedAt) / 1000)),
+    worldStartedAt: endedAt - matchDurationMs,
+    durationSeconds: Math.round(matchDurationMs / 1000),
     winner,
     reasonKey,
     redPaint,
@@ -5816,7 +5834,7 @@ function handleNetworkGameEvent(event) {
 }
 
 function handleNetworkWorldState(message) {
-  acceptWorldStartedAt(message.worldStartedAt, message.serverTime);
+  acceptWorldClock(message);
   if (Array.isArray(message.paint)) {
     for (const paintEvent of message.paint) handleNetworkGameEvent(paintEvent);
   }
@@ -6457,7 +6475,7 @@ massArmy = new MassArmySystem(scene, {
 });
   multiplayer = new MultiplayerClient({
     onSnapshot: (players, message) => {
-      acceptWorldStartedAt(message?.worldStartedAt, message?.serverTime);
+      acceptWorldClock(message);
       if (state.started) massArmy.syncRemotePlayers(players, multiplayer.clientId);
       updateTeamCounts();
       // Networked score/kills/deaths and team totals must be visible in the same
@@ -6470,7 +6488,7 @@ massArmy = new MassArmySystem(scene, {
   onRejected: () => blockDuplicateSession(),
   onWelcome: (message) => {
     const { team } = message;
-    acceptWorldStartedAt(message.worldStartedAt, message.serverTime);
+    acceptWorldClock(message);
     updateTeamCounts();
     if (!state.started || team === state.team) return;
     applyPlayerTeam(team);
@@ -6553,7 +6571,9 @@ function findRockPassageForStance(stanceName = 'stand') {
 
 globalThis.__bibishDebug = {
   previewWorldAge: (seconds = 0) => {
-    worldStartedAt = worldClockNow() - Math.max(0, Number(seconds) || 0) * 1000;
+    worldActiveElapsedMs = Math.max(0, Number(seconds) || 0) * 1000;
+    worldClockRunning = false;
+    worldClockSyncedAt = worldClockNow();
     updateWorldAgeDisplay(true);
     return worldAgeValue.textContent;
   },
@@ -6568,7 +6588,9 @@ globalThis.__bibishDebug = {
     state.kills = Math.max(state.kills, 18);
     state.deaths = Math.max(state.deaths, 6);
     state.elapsedSeconds = Math.max(state.elapsedSeconds, 4872);
-    worldStartedAt = worldClockNow() - 4872 * 1000;
+    worldActiveElapsedMs = 4872 * 1000;
+    worldClockRunning = false;
+    worldClockSyncedAt = worldClockNow();
     endMatch(safeWinner, 'territory', { persist: false });
     Object.assign(activeMatchResult, safeWinner === 'red'
       ? { redPaint: 63.4, bluePaint: 36.6, paintedPercent: 100, redForts: 7, blueForts: 3, redPlayers: 24, bluePlayers: 23 }

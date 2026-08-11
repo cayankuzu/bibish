@@ -85,6 +85,8 @@ export class MultiplayerClient {
     this.roomId = null;
     this.serverInstanceId = null;
     this.worldStartedAt = null;
+    this.worldActiveElapsedMs = 0;
+    this.worldClockRunning = false;
   }
 
   connect(profile) {
@@ -152,6 +154,10 @@ export class MultiplayerClient {
         this.roomId = message.roomId || null;
         this.serverInstanceId = message.instanceId || null;
         this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
+        if (message.worldActiveElapsedMs != null) {
+          this.worldActiveElapsedMs = Math.max(0, Number(message.worldActiveElapsedMs) || 0);
+          this.worldClockRunning = Boolean(message.worldClockRunning);
+        }
         this.serverTeamCounts = message.counts || this.serverTeamCounts;
         this.serverTeamStats = message.teamStats || this.serverTeamStats;
         this.serverPlayerCount = Math.max(0,
@@ -165,11 +171,19 @@ export class MultiplayerClient {
         this.serverTeamStats = message.teamStats || this.serverTeamStats;
         this.serverLeaderboard = Array.isArray(message.leaders) ? message.leaders : this.serverLeaderboard;
         this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
+        if (message.worldActiveElapsedMs != null) {
+          this.worldActiveElapsedMs = Math.max(0, Number(message.worldActiveElapsedMs) || 0);
+          this.worldClockRunning = Boolean(message.worldClockRunning);
+        }
         this.onSnapshot?.(message.players, message);
       } else if (message.type === 'game-event' && message.event) {
         this.onEvent?.(message.event, message);
       } else if (message.type === 'world-state') {
         this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
+        if (message.worldActiveElapsedMs != null) {
+          this.worldActiveElapsedMs = Math.max(0, Number(message.worldActiveElapsedMs) || 0);
+          this.worldClockRunning = Boolean(message.worldClockRunning);
+        }
         this.onWorldState?.(message);
       } else if (message.type === 'pong') {
         this.latencyMs = Math.max(0, performance.now() - Number(message.sentAt || performance.now()));
@@ -244,6 +258,8 @@ export class MultiplayerClient {
       roomId: this.roomId,
       serverInstanceId: this.serverInstanceId,
       worldStartedAt: this.worldStartedAt,
+      worldActiveElapsedMs: this.worldActiveElapsedMs,
+      worldClockRunning: this.worldClockRunning,
       deviceKey: this.deviceKey,
       lastSnapshotAgeMs: this.lastSnapshotAt ? Math.round(performance.now() - this.lastSnapshotAt) : null,
       url: websocketUrl(),

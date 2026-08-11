@@ -86,22 +86,38 @@ try {
   await page.evaluate(() => globalThis.__bibishDebug.previewMatchEnd('red', 'blue', false));
   const losingMessage = await page.locator('#winner-reason').textContent();
   if (!losingMessage?.includes('TÜYÜ KARŞI TAKIM DİKTİ')) throw new Error(`Missing losing copy: ${losingMessage}`);
-  const emptyWorldBeforeReadAt = Date.now();
   const emptyWorldBefore = await fetch(`${baseUrl}/__bibish/metrics`).then((response) => response.json());
   await new Promise((resolve) => setTimeout(resolve, 1100));
-  const emptyWorldAfterReadAt = Date.now();
   const emptyWorldAfter = await fetch(`${baseUrl}/__bibish/metrics`).then((response) => response.json());
   const emptyWorldClock = {
     playersBefore: emptyWorldBefore.players,
     playersAfter: emptyWorldAfter.players,
-    sameEpoch: emptyWorldBefore.worldStartedAt === emptyWorldAfter.worldStartedAt,
-    elapsedAdvanceMs: (emptyWorldAfterReadAt - emptyWorldAfter.worldStartedAt) - (emptyWorldBeforeReadAt - emptyWorldBefore.worldStartedAt),
+    runningBefore: emptyWorldBefore.worldClockRunning,
+    runningAfter: emptyWorldAfter.worldClockRunning,
+    elapsedAdvanceMs: emptyWorldAfter.worldActiveElapsedMs - emptyWorldBefore.worldActiveElapsedMs,
   };
-  if (emptyWorldClock.playersBefore !== 0 || emptyWorldClock.playersAfter !== 0 || !emptyWorldClock.sameEpoch || emptyWorldClock.elapsedAdvanceMs < 900) {
-    throw new Error(`Empty-world clock did not continue: ${JSON.stringify(emptyWorldClock)}`);
+  if (emptyWorldClock.playersBefore !== 0 || emptyWorldClock.playersAfter !== 0
+    || emptyWorldClock.runningBefore || emptyWorldClock.runningAfter || Math.abs(emptyWorldClock.elapsedAdvanceMs) > 50) {
+    throw new Error(`Empty-world clock did not pause: ${JSON.stringify(emptyWorldClock)}`);
   }
   await page.click('#end-home-button');
   await page.evaluate(() => globalThis.__bibishDebug.joinLoadTest('red', 99));
+  await page.waitForFunction(async () => {
+    const response = await fetch('/__bibish/metrics');
+    const data = await response.json();
+    return data.players === 1 && data.worldClockRunning === true;
+  }, null, { timeout: 10000 });
+  const activeWorldBefore = await fetch(`${baseUrl}/__bibish/metrics`).then((response) => response.json());
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const activeWorldAfter = await fetch(`${baseUrl}/__bibish/metrics`).then((response) => response.json());
+  const activeWorldClock = {
+    players: activeWorldAfter.players,
+    running: activeWorldAfter.worldClockRunning,
+    elapsedAdvanceMs: activeWorldAfter.worldActiveElapsedMs - activeWorldBefore.worldActiveElapsedMs,
+  };
+  if (activeWorldClock.players !== 1 || !activeWorldClock.running || activeWorldClock.elapsedAdvanceMs < 900) {
+    throw new Error(`Active-world clock did not advance: ${JSON.stringify(activeWorldClock)}`);
+  }
   const worldClock = await page.evaluate(() => {
     const fort = document.querySelector('#fort-strip').getBoundingClientRect();
     const clock = document.querySelector('#world-age').getBoundingClientRect();
@@ -116,7 +132,7 @@ try {
     throw new Error(`World clock is incorrect: ${JSON.stringify(worldClock)}`);
   }
   if (errors.length) throw new Error(`Browser errors: ${errors.join(' | ')}`);
-  console.log('BIBISH_MATCH_END_RESULT', JSON.stringify({ passed: true, recordId: record.id, end, archive, losingTeamStats, losingMessage, emptyWorldClock, worldClock, screenshotPath, archiveScreenshotPath, detailScreenshotPath }));
+  console.log('BIBISH_MATCH_END_RESULT', JSON.stringify({ passed: true, recordId: record.id, end, archive, losingTeamStats, losingMessage, emptyWorldClock, activeWorldClock, worldClock, screenshotPath, archiveScreenshotPath, detailScreenshotPath }));
 } finally {
   await context.close();
   await browser.close();

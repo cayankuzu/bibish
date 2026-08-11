@@ -44,7 +44,7 @@ function publicPlayer(player) {
   ];
 }
 
-export function createGameRoom({ now = () => Date.now() } = {}) {
+export function createGameRoom({ now = () => Date.now(), worldStartedAt: configuredWorldStartedAt = null } = {}) {
   const sockets = new Set();
   const players = new Map();
   const deviceSessions = new Map();
@@ -62,6 +62,7 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
   let outboundBytes = 0;
   let dirty = true;
   const startedAt = performance.now();
+  const worldStartedAt = Number(configuredWorldStartedAt) > 0 ? Number(configuredWorldStartedAt) : now();
   const startedCpu = process.cpuUsage();
   const eventLoopDelay = monitorEventLoopDelay({ resolution: 20 });
   eventLoopDelay.enable();
@@ -71,6 +72,22 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
     let blue = 0;
     for (const player of players.values()) player.team === 'red' ? red += 1 : blue += 1;
     return { red, blue };
+  }
+
+  function teamStatistics(allPlayers = [...players.values()]) {
+    const totals = {
+      red: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+      blue: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+    };
+    for (const player of allPlayers) {
+      const team = cleanTeam(player.team);
+      totals[team].players += 1;
+      totals[team].score += Math.max(0, Number(player.score) || 0);
+      totals[team].kills += Math.max(0, Number(player.kills) || 0);
+      totals[team].deaths += Math.max(0, Number(player.deaths) || 0);
+      totals[team].elapsedSeconds += Math.max(0, Number(player.elapsedSeconds) || 0);
+    }
+    return totals;
   }
 
   function balancedTeam(preferred) {
@@ -149,6 +166,7 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
     const allPlayers = [...players.values()];
     const grid = buildInterestGrid(allPlayers);
     const leaders = leaderboard(allPlayers);
+    const teamStats = teamStatistics(allPlayers);
     const serverTime = now();
     for (const socket of sockets) {
       if (socket.readyState !== 1) continue;
@@ -161,9 +179,11 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
       const message = JSON.stringify({
         type: 'snapshot',
         serverTime,
+        worldStartedAt,
         counts,
         totalPlayers: allPlayers.length,
         leaders,
+        teamStats,
         players: visiblePlayers.map(publicPlayer),
       });
       socket.send(message);
@@ -292,9 +312,11 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
         send(socket, {
           type: 'snapshot',
           serverTime: now(),
+          worldStartedAt,
           counts: teamCounts(),
           totalPlayers: allPlayers.length,
           leaders: leaderboard(allPlayers),
+          teamStats: teamStatistics(allPlayers),
           players: [],
         });
         return;
@@ -339,10 +361,13 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
           team,
           roomId: GLOBAL_ROOM_ID,
           instanceId: SERVER_INSTANCE_ID,
+          worldStartedAt,
+          serverTime: now(),
           counts: teamCounts(),
+          teamStats: teamStatistics(),
           snapshotHz: 1000 / SNAPSHOT_INTERVAL_MS,
         });
-        send(socket, { type: 'world-state', paint: paintHistory, forts: fortOwners, eventSequence });
+        send(socket, { type: 'world-state', paint: paintHistory, forts: fortOwners, eventSequence, worldStartedAt, serverTime: now() });
         return;
       }
       const player = players.get(socket);
@@ -425,6 +450,7 @@ export function createGameRoom({ now = () => Date.now() } = {}) {
         activeDevices: deviceSessions.size,
         roomId: GLOBAL_ROOM_ID,
         instanceId: SERVER_INSTANCE_ID,
+        worldStartedAt,
         teams: teamCounts(),
         totalConnections,
         inboundMessages,

@@ -43,18 +43,21 @@
     <div id="hud" class="hidden">
       <div id="top-bar">
         <div class="brand-small">BIBISH</div>
-        <div id="fort-strip" aria-label="Karakol durumları">
-          <span class="fort red">K1</span>
-          <span class="fort red">K2</span>
-          <span class="fort red">K3</span>
-          <span class="fort red">K4</span>
-          <span class="fort red">K5</span>
-          <span class="frontline" data-i18n="hud.front">CEPHE</span>
-          <span class="fort blue">M1</span>
-          <span class="fort blue">M2</span>
-          <span class="fort blue">M3</span>
-          <span class="fort blue">M4</span>
-          <span class="fort blue">M5</span>
+        <div id="front-center">
+          <div id="fort-strip" aria-label="Karakol durumları">
+            <span class="fort red">K1</span>
+            <span class="fort red">K2</span>
+            <span class="fort red">K3</span>
+            <span class="fort red">K4</span>
+            <span class="fort red">K5</span>
+            <span class="frontline" data-i18n="hud.front">CEPHE</span>
+            <span class="fort blue">M1</span>
+            <span class="fort blue">M2</span>
+            <span class="fort blue">M3</span>
+            <span class="fort blue">M4</span>
+            <span class="fort blue">M5</span>
+          </div>
+          <div id="world-age" aria-live="off"><span data-i18n="hud.mapActive">HARİTA AKTİF</span><strong id="world-age-value">00:00:00</strong></div>
         </div>
       </div>
 
@@ -236,6 +239,14 @@
 
         <button id="team-settings-button" class="visually-hidden" tabindex="-1" aria-hidden="true">OYUN AYARLARI</button>
       </section>
+      <aside id="match-history-panel" aria-labelledby="match-history-title">
+        <header>
+          <div><span data-i18n="history.kicker">SAVAŞ ARŞİVİ</span><h2 id="match-history-title" data-i18n="history.title">BİTENLER</h2></div>
+          <b id="match-history-count">0</b>
+        </header>
+        <div id="match-history-list"></div>
+        <p id="match-history-empty" data-i18n="history.empty">Henüz biten savaş yok. İlk tüyü diken burada görünecek.</p>
+      </aside>
     </main>
 
     <section id="pause-screen" class="overlay hidden">
@@ -335,12 +346,71 @@
       </div>
     </section>
 
-    <section id="end-screen" class="overlay hidden">
-      <div class="pause-card">
-        <p class="kicker" data-i18n="end.kicker">BIBISH SAVAŞI TAMAMLANDI</p>
-        <h2 id="winner-title">—</h2>
-        <p id="winner-reason">—</p>
-        <button id="restart-button" class="primary-button" data-i18n="end.restart">YENİDEN BAŞLA</button>
+    <section id="end-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="winner-title">
+      <div class="end-card">
+        <header class="end-heading">
+          <div>
+            <p class="kicker" data-i18n="end.kicker">BIBISH SAVAŞI TAMAMLANDI</p>
+            <h2 id="winner-title">—</h2>
+            <p id="winner-reason">—</p>
+          </div>
+          <div class="end-duration"><span data-i18n="end.duration">SAVAŞ SÜRESİ</span><strong id="end-duration-value">00:00:00</strong></div>
+        </header>
+        <div class="end-overview">
+          <section class="end-map-panel">
+            <div class="end-section-title"><span data-i18n="end.mapSummary">HARİTA ÖZETİ</span><small id="end-ended-at">—</small></div>
+            <canvas id="end-map-canvas" width="512" height="512" aria-label="Biten savaşın harita özeti"></canvas>
+            <div class="end-paint-bar"><i id="end-red-paint-fill"></i><i id="end-blue-paint-fill"></i></div>
+            <div class="end-paint-values"><b class="red"><span data-i18n="team.redShort">KIRMIZI</span> <i id="end-red-paint">0%</i></b><b class="blue"><span data-i18n="team.blueShort">MAVİ</span> <i id="end-blue-paint">0%</i></b></div>
+          </section>
+          <section class="end-summary-panel">
+            <div class="end-section-title"><span data-i18n="end.battleSummary">OYUN ÖZETİ</span></div>
+            <div class="end-summary-grid">
+              <article><span data-i18n="end.winner">KAZANAN</span><strong id="end-winner-team">—</strong></article>
+              <article><span data-i18n="end.forts">KALELER</span><strong id="end-forts">—</strong></article>
+              <article><span data-i18n="end.players">OYUNCULAR</span><strong id="end-players">—</strong></article>
+              <article><span data-i18n="end.painted">BOYANAN ALAN</span><strong id="end-painted">—</strong></article>
+            </div>
+            <div class="end-player-stats">
+              <span><i data-i18n="hud.score">PUAN</i><strong id="end-player-score">0</strong></span>
+              <span><i data-i18n="hud.kills">KILL</i><strong id="end-player-kills">0</strong></span>
+              <span><i data-i18n="hud.deaths">ÖLÜM</i><strong id="end-player-deaths">0</strong></span>
+              <span><i data-i18n="hud.time">SÜRE</i><strong id="end-player-time">00:00:00</strong></span>
+            </div>
+            <div class="end-section-title leaderboard-title"><span data-i18n="hud.leaderboard">LİDER TABLOSU</span></div>
+            <div id="end-leaderboard" class="end-leaderboard"></div>
+          </section>
+        </div>
+        <footer class="end-actions">
+          <button id="end-home-button" class="ghost-button" type="button" data-i18n="end.home">ANA SAYFA</button>
+          <button id="restart-button" class="primary-button" type="button" data-i18n="end.restart">YENİ OYUN</button>
+        </footer>
+      </div>
+    </section>
+
+    <section id="match-details-screen" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="match-details-title">
+      <div class="match-details-card">
+        <header class="match-details-heading">
+          <div><p class="kicker" data-i18n="history.detailKicker">SAVAŞ KAYDI</p><h2 id="match-details-title">—</h2></div>
+          <button id="close-match-details" class="ghost-button" type="button" data-i18n="common.back">GERİ DÖN</button>
+        </header>
+        <div class="match-details-layout">
+          <section class="end-map-panel">
+            <canvas id="history-map-canvas" width="512" height="512" aria-label="Kayıtlı savaş haritası"></canvas>
+            <div class="end-paint-bar"><i id="history-red-paint-fill"></i><i id="history-blue-paint-fill"></i></div>
+            <div class="end-paint-values"><b class="red" id="history-red-paint">—</b><b class="blue" id="history-blue-paint">—</b></div>
+          </section>
+          <section class="history-detail-summary">
+            <p id="history-detail-date">—</p>
+            <div id="history-team-tabs" role="tablist" aria-label="Takım istatistikleri">
+              <button id="history-winner-tab" type="button" role="tab" aria-selected="true"><span data-i18n="history.winnerTeam">KAZANAN</span><strong>—</strong></button>
+              <button id="history-loser-tab" type="button" role="tab" aria-selected="false"><span data-i18n="history.loserTeam">KAYBEDEN</span><strong>—</strong></button>
+            </div>
+            <div id="history-detail-stats" class="end-summary-grid"></div>
+            <div class="end-section-title"><span data-i18n="hud.leaderboard">LİDER TABLOSU</span></div>
+            <div id="history-leaderboard" class="end-leaderboard"></div>
+          </section>
+        </div>
       </div>
     </section>
 
@@ -357,7 +427,7 @@
     </section>
 
     <div id="toast" role="status" aria-live="polite"></div>
-    <footer id="app-footer"><span>© 2026 BIBISH</span><span id="powered-by">MeMoDe tarafından</span><span>v0.4.7</span></footer>
+    <footer id="app-footer"><span>© 2026 BIBISH</span><span id="powered-by">MeMoDe tarafından</span><span>v0.4.8</span></footer>
 
     <script type="module" src="/src/main.js"></script>
   </body>

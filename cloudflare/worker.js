@@ -9,7 +9,7 @@ const MAX_MESSAGE_BYTES = 8 * 1024;
 const MAX_MESSAGES_PER_SECOND = 40;
 const ROOM_ID = 'global';
 const PAINT_HISTORY_LIMIT = 1000;
-const WORLD_STATE_SCHEMA_VERSION = 1;
+const WORLD_STATE_SCHEMA_VERSION = 2;
 const DEATH_SCORE_PENALTY = 25;
 const FORTS = [
   { x: -510, z: -450, team: 'red' }, { x: -255, z: -490, team: 'red' },
@@ -67,6 +67,7 @@ export class GameRoom {
     this.eventSequence = 0;
     this.dirty = false;
     this.startedAt = Date.now();
+    this.worldStartedAt = null;
     this.instanceId = `do-${ctx.id.toString().slice(0, 20)}`;
     this.metrics = {
       totalConnections: 0,
@@ -147,6 +148,13 @@ export class GameRoom {
     // Wall-clock seeding guarantees that clients which stayed open across a
     // deployment never reject new events as older duplicate sequence IDs.
     this.eventSequence = Math.max(storedSequence, latestPaintSequence, Date.now() * 1000);
+    const worldStartRows = this.sql.exec("SELECT value FROM world_meta WHERE key = 'world_started_at'").toArray();
+    this.worldStartedAt = Math.max(1, Number(worldStartRows[0]?.value) || Date.now());
+    this.sql.exec(
+      'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
+      'world_started_at',
+      this.worldStartedAt,
+    );
     this.sql.exec(
       'INSERT OR REPLACE INTO world_meta (key, value) VALUES (?, ?)',
       'schema_version',
@@ -280,6 +288,22 @@ export class GameRoom {
     return { red, blue };
   }
 
+  teamStatistics(allPlayers = [...this.players.values()]) {
+    const totals = {
+      red: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+      blue: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+    };
+    for (const player of allPlayers) {
+      const team = cleanTeam(player.team);
+      totals[team].players += 1;
+      totals[team].score += Math.max(0, Number(player.score) || 0);
+      totals[team].kills += Math.max(0, Number(player.kills) || 0);
+      totals[team].deaths += Math.max(0, Number(player.deaths) || 0);
+      totals[team].elapsedSeconds += Math.max(0, Number(player.elapsedSeconds) || 0);
+    }
+    return totals;
+  }
+
   balancedTeam(preferred) {
     const counts = this.teamCounts();
     if (counts.red < counts.blue) return 'red';
@@ -346,9 +370,11 @@ export class GameRoom {
       this.send(socket, {
         type: 'snapshot',
         serverTime: Date.now(),
+        worldStartedAt: this.worldStartedAt,
         counts: this.teamCounts(),
         totalPlayers: allPlayers.length,
         leaders: this.leaderboard(allPlayers),
+        teamStats: this.teamStatistics(allPlayers),
         players: [],
       });
       return;
@@ -552,7 +578,10 @@ export class GameRoom {
       team: player.team,
       roomId: ROOM_ID,
       instanceId: this.instanceId,
+      worldStartedAt: this.worldStartedAt,
+      serverTime: Date.now(),
       counts: this.teamCounts(),
+      teamStats: this.teamStatistics(),
       snapshotHz: 1000 / SNAPSHOT_INTERVAL_MS,
     });
     this.send(socket, {
@@ -560,6 +589,8 @@ export class GameRoom {
       paint: this.paintHistory,
       forts: this.fortOwners,
       eventSequence: this.eventSequence,
+      worldStartedAt: this.worldStartedAt,
+      serverTime: Date.now(),
       persisted: true,
       schemaVersion: WORLD_STATE_SCHEMA_VERSION,
     });
@@ -609,6 +640,7 @@ export class GameRoom {
     const counts = this.teamCounts();
     const grid = this.buildInterestGrid(allPlayers);
     const leaders = this.leaderboard(allPlayers);
+    const teamStats = this.teamStatistics(allPlayers);
     const serverTime = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
       if (socket.readyState !== WebSocket.OPEN) continue;
@@ -617,9 +649,11 @@ export class GameRoom {
       if (!this.send(socket, {
         type: 'snapshot',
         serverTime,
+        worldStartedAt: this.worldStartedAt,
         counts,
         totalPlayers: allPlayers.length,
         leaders,
+        teamStats,
         players: visiblePlayers.map(publicPlayer),
       })) {
         this.metrics.droppedSnapshots += 1;
@@ -659,6 +693,7 @@ export class GameRoom {
       activeDevices: this.deviceSessions.size,
       roomId: ROOM_ID,
       instanceId: this.instanceId,
+      worldStartedAt: this.worldStartedAt,
       teams: counts,
       uptimeSeconds: Math.round((Date.now() - this.startedAt) / 1000),
       persistedPaintEvents: this.paintHistory.length,

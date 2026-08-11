@@ -330,6 +330,7 @@ export class PoopPool extends TimedInstancePool {
     slot.previous = slot.previous?.copy(position) || position.clone();
     slot.velocity = slot.velocity?.copy(velocity) || velocity.clone();
     slot.rotation = 0;
+    slot.bounceCount = 0;
     this.mesh.setColorAt(index, new THREE.Color(color));
     this.commit();
   }
@@ -350,6 +351,7 @@ export class PoopPool extends TimedInstancePool {
         const hit = collisionTest(slot.previous, slot.position, slot.life);
         if (hit) {
           if (hit.bounce) {
+            slot.bounceCount += 1;
             slot.position.copy(hit.point).addScaledVector(hit.normal, 0.16);
             slot.velocity.reflect(hit.normal).multiplyScalar(0.58);
             slot.velocity.addScaledVector(hit.normal, 1.2);

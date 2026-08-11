@@ -1063,6 +1063,7 @@ export class MassArmySystem {
     let best = null;
     let bestT = Infinity;
     for (let index = 0; index < this.count; index += 1) {
+      if (this.networkControlled && !this.remoteConnected[index]) continue;
       if (this.dead[index] || (this.team[index] === 0 ? 'red' : 'blue') === attackerTeam) continue;
       for (const [height, radius, damageZone] of [[1.72, 0.24, 'head'], [1.05, 0.34, 'torso'], [0.43, 0.29, 'limb']]) {
         const centerX = this.x[index];

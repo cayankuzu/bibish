@@ -1,6 +1,6 @@
 {
   "name": "bibish",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
     "loadtest:cloud": "node tests/real-browser-load-test.js --browserstack",
     "test:local-multiplayer": "node tests/local-multiplayer-test.js",
     "test:single-session": "node tests/single-session-test.js",
+    "test:match-end": "node tests/match-end-browser-test.js",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
   },

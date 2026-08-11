@@ -44,7 +44,9 @@ const I18N = {
     'settings.volume': 'Ana ses seviyesi', 'settings.volumeHelp': 'Yön, mesafe ve yakınlık bilgisi kulaklık ve stereo hoparlörler için korunur.',
     'settings.priority': 'AAA hissi için öncelik sırası', 'settings.priorityHelp': 'Önce kontrol tepkisi ve kare hızı korunur; cihaz zorlanırsa efekt yoğunluğu, gölge ve iç çözünürlük otomatik azaltılır.',
     'quality.auto': 'Otomatik — Önerilen', 'quality.low': 'Düşük', 'quality.medium': 'Orta', 'quality.high': 'Yüksek', 'quality.ultra': 'Ultra',
-    'end.kicker': 'BIBISH SAVAŞI TAMAMLANDI', 'end.restart': 'YENİDEN BAŞLA', 'reset.title': 'SKORLAR SIFIRLANSIN MI?', 'reset.body': 'Süre, puan, kill ve ölüm sayın kalıcı olarak sıfırlanacak.', 'reset.confirm': 'EVET, SIFIRLA',
+    'end.kicker': 'BIBISH SAVAŞI TAMAMLANDI', 'end.restart': 'YENİ OYUN', 'end.home': 'ANA SAYFA', 'end.duration': 'SAVAŞ SÜRESİ', 'end.mapSummary': 'HARİTA ÖZETİ', 'end.battleSummary': 'OYUN ÖZETİ', 'end.winner': 'KAZANAN', 'end.forts': 'KALELER', 'end.players': 'OYUNCULAR', 'end.painted': 'BOYANAN ALAN', 'end.winMessage': 'TEBRİKLER, SIÇIP SIVADINIZ VE TÜYÜ DİKTİNİZ. KAZANDINIZ.', 'end.loseMessage': 'TEBRİKLER, SIÇIP SIVADINIZ FAKAT TÜYÜ KARŞI TAKIM DİKTİ.', 'end.territoryReason': 'Boyanabilir alanın tamamı kaplandı.',
+    'history.kicker': 'SAVAŞ ARŞİVİ', 'history.title': 'BİTENLER', 'history.empty': 'Henüz biten savaş yok. İlk tüyü diken burada görünecek.', 'history.detailKicker': 'SAVAŞ KAYDI', 'history.victory': 'ZAFER', 'history.defeat': 'MAĞLUBİYET', 'history.winnerTeam': 'KAZANAN', 'history.loserTeam': 'KAYBEDEN', 'history.teamScore': 'TAKIM PUANI', 'history.totalKills': 'TOPLAM KILL', 'history.totalDeaths': 'TOPLAM ÖLÜM', 'history.totalTime': 'TOPLAM SÜRE', 'history.redForts': 'KIRMIZI KALE', 'history.blueForts': 'MAVİ KALE',
+    'hud.mapActive': 'HARİTA AKTİF', 'reset.title': 'SKORLAR SIFIRLANSIN MI?', 'reset.body': 'Süre, puan, kill ve ölüm sayın kalıcı olarak sıfırlanacak.', 'reset.confirm': 'EVET, SIFIRLA',
     'footer.powered': 'MeMoDe tarafından', 'map.fixed': 'SABİT HARİTA · BIBISH ADASI', 'map.fixedLong': 'BIBISH ADASI · SABİT HARİTA',
     'waste.pee': 'ÇİŞ', 'waste.vomit': 'KUSMUK', 'waste.poop': 'KAKA', 'weapon.rifle': 'TÜFEK', 'weapon.sword': 'KILIÇ', 'weapon.ready': 'HAZIR', 'shield.lowered': 'HAZIR', 'shield.raised': 'AKTİF', 'scope.wheel': 'TEKER · ZOOM',
     'direction.n': 'KUZEY', 'direction.ne': 'KUZEYDOĞU', 'direction.e': 'DOĞU', 'direction.se': 'GÜNEYDOĞU', 'direction.s': 'GÜNEY', 'direction.sw': 'GÜNEYBATI', 'direction.w': 'BATI', 'direction.nw': 'KUZEYBATI',
@@ -72,7 +74,9 @@ const I18N = {
     'settings.volume': 'Master volume', 'settings.volumeHelp': 'Direction, distance and proximity cues are preserved for headphones and stereo speakers.',
     'settings.priority': 'Priority order for an AAA feel', 'settings.priorityHelp': 'Control response and frame rate are protected first; effect density, shadows and internal resolution scale down if needed.',
     'quality.auto': 'Automatic — Recommended', 'quality.low': 'Low', 'quality.medium': 'Medium', 'quality.high': 'High', 'quality.ultra': 'Ultra',
-    'end.kicker': 'BIBISH BATTLE COMPLETE', 'end.restart': 'RESTART', 'reset.title': 'RESET SCORES?', 'reset.body': 'Your time, score, kills and deaths will be permanently reset.', 'reset.confirm': 'YES, RESET',
+    'end.kicker': 'BIBISH BATTLE COMPLETE', 'end.restart': 'NEW GAME', 'end.home': 'HOME', 'end.duration': 'BATTLE DURATION', 'end.mapSummary': 'MAP SUMMARY', 'end.battleSummary': 'MATCH SUMMARY', 'end.winner': 'WINNER', 'end.forts': 'FORTS', 'end.players': 'PLAYERS', 'end.painted': 'PAINTED AREA', 'end.winMessage': 'CONGRATULATIONS. YOU MADE A GLORIOUS MESS AND PLANTED THE FEATHER. YOU WON.', 'end.loseMessage': 'CONGRATULATIONS. YOU MADE A GLORIOUS MESS, BUT THE OTHER TEAM PLANTED THE FEATHER.', 'end.territoryReason': 'Every paintable part of the field was covered.',
+    'history.kicker': 'BATTLE ARCHIVE', 'history.title': 'FINISHED', 'history.empty': 'No finished battles yet. The first team to plant the feather will appear here.', 'history.detailKicker': 'BATTLE RECORD', 'history.victory': 'VICTORY', 'history.defeat': 'DEFEAT', 'history.winnerTeam': 'WINNER', 'history.loserTeam': 'LOSER', 'history.teamScore': 'TEAM SCORE', 'history.totalKills': 'TOTAL KILLS', 'history.totalDeaths': 'TOTAL DEATHS', 'history.totalTime': 'TOTAL TIME', 'history.redForts': 'RED FORTS', 'history.blueForts': 'BLUE FORTS',
+    'hud.mapActive': 'MAP ACTIVE', 'reset.title': 'RESET SCORES?', 'reset.body': 'Your time, score, kills and deaths will be permanently reset.', 'reset.confirm': 'YES, RESET',
     'footer.powered': 'Powered by MeMoDe', 'map.fixed': 'FIXED MAP · BIBISH ISLAND', 'map.fixedLong': 'BIBISH ISLAND · FIXED MAP',
     'waste.pee': 'PEE', 'waste.vomit': 'VOMIT', 'waste.poop': 'POOP', 'weapon.rifle': 'RIFLE', 'weapon.sword': 'SWORD', 'weapon.ready': 'READY', 'shield.lowered': 'READY', 'shield.raised': 'ACTIVE', 'scope.wheel': 'WHEEL · ZOOM',
     'direction.n': 'NORTH', 'direction.ne': 'NORTHEAST', 'direction.e': 'EAST', 'direction.se': 'SOUTHEAST', 'direction.s': 'SOUTH', 'direction.sw': 'SOUTHWEST', 'direction.w': 'WEST', 'direction.nw': 'NORTHWEST',
@@ -606,6 +610,16 @@ const npcLabelLayer = document.querySelector('#npc-label-layer');
 const endScreen = document.querySelector('#end-screen');
 const winnerTitle = document.querySelector('#winner-title');
 const winnerReason = document.querySelector('#winner-reason');
+const worldAgeValue = document.querySelector('#world-age-value');
+const matchHistoryPanel = document.querySelector('#match-history-panel');
+const matchHistoryList = document.querySelector('#match-history-list');
+const matchHistoryEmpty = document.querySelector('#match-history-empty');
+const matchHistoryCount = document.querySelector('#match-history-count');
+const matchDetailsScreen = document.querySelector('#match-details-screen');
+const endMapCanvas = document.querySelector('#end-map-canvas');
+const historyMapCanvas = document.querySelector('#history-map-canvas');
+let worldStartedAt = Date.now();
+let worldServerOffsetMs = 0;
 
 const scene = new THREE.Scene();
 // Hafif turkuaz-gri gökyüzü ve nemli ufuk, yoğun bitki örtüsüne savaş filmi atmosferi verir.
@@ -671,6 +685,8 @@ const BLOCKER_GRID_SIZE = 32;
 let collisionQuerySerial = 0;
 const paintables = [];
 const bulletSurfaces = [];
+let wasteSolidSourceCount = 0;
+let wasteSolidCoveredSourceCount = 0;
 const worldLodObjects = [];
 const walkSurfaces = [];
 const ladderZones = [];
@@ -718,7 +734,30 @@ paintAimGlow.renderOrder = 11;
 scene.add(paintAimGlow);
 
 const PLAYER_STATS_KEY = 'bibish-player-stats-v1';
+const MATCH_HISTORY_KEY = 'bibish-match-history-v1';
+const MATCH_HISTORY_LIMIT = 12;
+const MATCH_MAP_PREVIEW_SIZE = 48;
 const DEATH_SCORE_PENALTY = 75;
+
+function loadMatchHistory() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(MATCH_HISTORY_KEY) || '[]');
+    return Array.isArray(stored) ? stored.slice(0, MATCH_HISTORY_LIMIT) : [];
+  } catch {
+    return [];
+  }
+}
+
+let matchHistory = loadMatchHistory();
+let activeMatchResult = null;
+
+function saveMatchHistory() {
+  try {
+    localStorage.setItem(MATCH_HISTORY_KEY, JSON.stringify(matchHistory.slice(0, MATCH_HISTORY_LIMIT)));
+  } catch {
+    // Arşiv dolu veya depolama kapalıysa oyun sonu ekranı yine çalışır.
+  }
+}
 
 function loadPlayerStats() {
   try {
@@ -856,6 +895,301 @@ function savePlayerStats() {
   updateCareerUI();
 }
 
+function formatWorldAge(totalSeconds) {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  if (seconds < 86400) return formatElapsedTime(seconds);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor(seconds % 86400 / 3600);
+  if (days < 7) return currentLanguage === 'tr'
+    ? `${days} GÜN ${String(hours).padStart(2, '0')} SA`
+    : `${days} ${days === 1 ? 'DAY' : 'DAYS'} ${String(hours).padStart(2, '0')} H`;
+  const weeks = Math.floor(days / 7);
+  const remainingDays = days % 7;
+  return currentLanguage === 'tr'
+    ? `${weeks} HAFTA ${remainingDays} GÜN ${String(hours).padStart(2, '0')} SA`
+    : `${weeks} ${weeks === 1 ? 'WEEK' : 'WEEKS'} ${remainingDays} ${remainingDays === 1 ? 'DAY' : 'DAYS'} ${String(hours).padStart(2, '0')} H`;
+}
+
+let lastWorldAgeSecond = -1;
+const worldClockNow = () => Date.now() + worldServerOffsetMs;
+function updateWorldAgeDisplay(force = false) {
+  const elapsed = Math.max(0, Math.floor((worldClockNow() - worldStartedAt) / 1000));
+  if (!force && elapsed === lastWorldAgeSecond) return;
+  lastWorldAgeSecond = elapsed;
+  worldAgeValue.textContent = formatWorldAge(elapsed);
+}
+
+function acceptWorldStartedAt(value, serverTime = null) {
+  const timestamp = Number(value);
+  const authoritativeNow = Number(serverTime);
+  if (Number.isFinite(authoritativeNow) && authoritativeNow > 0) worldServerOffsetMs = authoritativeNow - Date.now();
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return;
+  if (timestamp !== worldStartedAt) {
+    worldStartedAt = timestamp;
+    lastWorldAgeSecond = -1;
+    updateWorldAgeDisplay(true);
+  }
+}
+
+function formatMatchDate(timestamp) {
+  return new Intl.DateTimeFormat(currentLanguage === 'tr' ? 'tr-TR' : 'en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(Number(timestamp) || Date.now()));
+}
+
+function captureTerritoryPreview(size = MATCH_MAP_PREVIEW_SIZE) {
+  let cells = '';
+  for (let y = 0; y < size; y += 1) {
+    const sourceY = Math.min(TERRITORY_SIZE - 1, Math.floor((y + 0.5) / size * TERRITORY_SIZE));
+    for (let x = 0; x < size; x += 1) {
+      const sourceX = Math.min(TERRITORY_SIZE - 1, Math.floor((x + 0.5) / size * TERRITORY_SIZE));
+      cells += String(territoryCells[sourceY * TERRITORY_SIZE + sourceX] || 0);
+    }
+  }
+  return { size, cells };
+}
+
+function collectMatchLeaders() {
+  const entries = [];
+  const seen = new Set();
+  const selfId = multiplayer?.clientId || 'self';
+  const add = (entry) => {
+    const id = String(entry.id || entry.name || 'player');
+    if (seen.has(id)) return;
+    seen.add(id);
+    entries.push(entry);
+  };
+  add({
+    id: selfId,
+    name: state.playerName,
+    team: state.team || 'red',
+    countryCode: state.countryCode,
+    score: Math.round(state.score),
+    elapsedSeconds: Math.round(state.elapsedSeconds),
+    kills: state.kills,
+    deaths: state.deaths,
+    self: true,
+  });
+  for (const entry of multiplayer?.serverLeaderboard || []) {
+    if (!Array.isArray(entry)) continue;
+    add({
+      id: entry[0], name: String(entry[1] || 'BibishPlayer'), team: entry[2] === 'blue' ? 'blue' : 'red',
+      countryCode: String(entry[3] || 'TR'), score: Math.max(0, Math.round(Number(entry[4]) || 0)),
+      elapsedSeconds: Math.max(0, Math.round(Number(entry[5]) || 0)), kills: Math.max(0, Math.round(Number(entry[6]) || 0)),
+      deaths: Math.max(0, Math.round(Number(entry[7]) || 0)), self: entry[0] === selfId,
+    });
+  }
+  return entries.sort((a, b) => b.score - a.score || b.kills - a.kills || a.deaths - b.deaths).slice(0, 9);
+}
+
+function matchTeamStatistics(leaders = [], source = null, counts = null) {
+  const totals = {
+    red: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+    blue: { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 },
+  };
+  for (const player of leaders) {
+    const team = player.team === 'blue' ? 'blue' : 'red';
+    totals[team].players += 1;
+    totals[team].score += Math.max(0, Number(player.score) || 0);
+    totals[team].kills += Math.max(0, Number(player.kills) || 0);
+    totals[team].deaths += Math.max(0, Number(player.deaths) || 0);
+    totals[team].elapsedSeconds += Math.max(0, Number(player.elapsedSeconds) || 0);
+  }
+  for (const team of ['red', 'blue']) {
+    const authoritative = source?.[team];
+    if (authoritative && Number(authoritative.players) > 0) {
+      for (const key of ['players', 'score', 'kills', 'deaths', 'elapsedSeconds']) {
+        totals[team][key] = Math.max(0, Math.round(Number(authoritative[key]) || 0));
+      }
+    } else if (counts) {
+      totals[team].players = Math.max(totals[team].players, Math.round(Number(counts[team]) || 0));
+    }
+  }
+  return totals;
+}
+
+function createMatchRecord(winner, reasonKey = 'territory') {
+  const endedAt = worldClockNow();
+  const total = Math.max(1, paintableTerritoryCount);
+  const redPaint = territoryCounts[1] / total * 100;
+  const bluePaint = territoryCounts[2] / total * 100;
+  const counts = multiplayer?.serverTeamCounts || { red: state.team === 'red' ? 1 : 0, blue: state.team === 'blue' ? 1 : 0 };
+  const leaders = collectMatchLeaders();
+  return {
+    id: `match-${endedAt}-${Math.random().toString(36).slice(2, 8)}`,
+    endedAt,
+    worldStartedAt,
+    durationSeconds: Math.max(0, Math.round((endedAt - worldStartedAt) / 1000)),
+    winner,
+    reasonKey,
+    redPaint,
+    bluePaint,
+    paintedPercent: redPaint + bluePaint,
+    redForts: fortData.filter((fort) => fort.team === 'red').length,
+    blueForts: fortData.filter((fort) => fort.team === 'blue').length,
+    redPlayers: Math.max(0, Math.round(Number(counts.red) || 0)),
+    bluePlayers: Math.max(0, Math.round(Number(counts.blue) || 0)),
+    forts: fortData.map((fort) => ({ x: fort.x, z: fort.z, team: fort.team })),
+    player: {
+      name: state.playerName,
+      team: state.team || 'red',
+      countryCode: state.countryCode,
+      score: Math.round(state.score),
+      kills: state.kills,
+      deaths: state.deaths,
+      elapsedSeconds: Math.round(state.elapsedSeconds),
+    },
+    leaders,
+    teamStats: matchTeamStatistics(leaders, multiplayer?.serverTeamStats, counts),
+    territoryPreview: captureTerritoryPreview(),
+  };
+}
+
+function persistMatchRecord(record) {
+  if (!record || matchHistory.some((item) => item.id === record.id)) return;
+  matchHistory.unshift(record);
+  matchHistory = matchHistory.slice(0, MATCH_HISTORY_LIMIT);
+  saveMatchHistory();
+  renderMatchHistory();
+}
+
+function renderMatchHistory() {
+  if (!matchHistoryList) return;
+  matchHistoryCount.textContent = matchHistory.length;
+  matchHistoryEmpty.classList.toggle('hidden', matchHistory.length > 0);
+  matchHistoryList.innerHTML = matchHistory.map((record) => {
+    const winner = record.winner === 'blue' ? 'blue' : 'red';
+    const playerWon = record.player?.team === winner;
+    return `<button class="match-history-item" type="button" data-match-id="${escapeHtml(record.id)}" style="--match-color:${winner === 'red' ? 'var(--red)' : 'var(--blue)'}">
+      <i></i><span class="match-history-copy"><b>${escapeHtml(TEAM[winner].name)} · ${t(playerWon ? 'history.victory' : 'history.defeat')}</b><small>${escapeHtml(formatMatchDate(record.endedAt))} · ${formatElapsedTime(record.durationSeconds)}</small></span><strong>→</strong>
+    </button>`;
+  }).join('');
+}
+
+function drawRecordedMap(canvas, record) {
+  if (!canvas || !record) return;
+  const context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.imageSmoothingEnabled = true;
+  context.drawImage(mapBaseCanvas, 0, 0, canvas.width, canvas.height);
+  const preview = record.territoryPreview;
+  if (preview?.cells && preview.size) {
+    const layer = document.createElement('canvas');
+    layer.width = layer.height = preview.size;
+    const layerContext = layer.getContext('2d');
+    const image = layerContext.createImageData(preview.size, preview.size);
+    for (let index = 0; index < preview.cells.length && index < preview.size * preview.size; index += 1) {
+      const teamId = Number(preview.cells[index]);
+      if (teamId !== 1 && teamId !== 2) continue;
+      const pixel = index * 4;
+      image.data[pixel] = teamId === 1 ? 255 : 40;
+      image.data[pixel + 1] = teamId === 1 ? 49 : 184;
+      image.data[pixel + 2] = teamId === 1 ? 94 : 255;
+      image.data[pixel + 3] = 205;
+    }
+    layerContext.putImageData(image, 0, 0);
+    context.imageSmoothingEnabled = false;
+    context.drawImage(layer, 0, 0, canvas.width, canvas.height);
+  }
+  for (const fort of record.forts || []) {
+    const x = (Number(fort.x) + WORLD.halfWidth) / (WORLD.halfWidth * 2) * canvas.width;
+    const y = (Number(fort.z) + WORLD.halfDepth) / (WORLD.halfDepth * 2) * canvas.height;
+    const size = Math.max(5, canvas.width * 0.014);
+    context.fillStyle = fort.team === 'blue' ? '#28b8ff' : '#ff315e';
+    context.strokeStyle = '#11110f';
+    context.lineWidth = Math.max(2, canvas.width * 0.006);
+    context.fillRect(x - size, y - size, size * 2, size * 2);
+    context.strokeRect(x - size, y - size, size * 2, size * 2);
+  }
+}
+
+function renderRecordedLeaderboard(container, leaders = []) {
+  if (!container) return;
+  const heading = `<div class="end-leader-head"><i>#</i><b>${t('hud.player')}</b><span>${t('hud.score')}</span><span>${t('hud.time')}</span><span>${t('hud.kills')}</span><span>${t('hud.deaths')}</span></div>`;
+  container.innerHTML = heading + (leaders.slice(0, 9).map((player, index) => `<div class="end-leader-row${player.self ? ' self' : ''}" style="--row-color:${player.team === 'blue' ? 'var(--blue)' : 'var(--red)'}">
+    <i>${index + 1}</i><b>${flagMarkup(player.countryCode)}${escapeHtml(player.name)}</b><span>${Math.round(Number(player.score) || 0)}</span><span>${formatElapsedTime(player.elapsedSeconds)}</span><span>${Math.round(Number(player.kills) || 0)}</span><span>${Math.round(Number(player.deaths) || 0)}</span>
+  </div>`).join('') || '<div class="end-leader-row"><i>1</i><b>—</b><span>0</span><span>00:00:00</span><span>0</span><span>0</span></div>');
+}
+
+function renderEndScreen(record) {
+  if (!record) return;
+  const winner = record.winner === 'blue' ? 'blue' : 'red';
+  const won = record.player?.team === winner;
+  endScreen.style.setProperty('--result-color', winner === 'red' ? 'var(--red)' : 'var(--blue)');
+  winnerTitle.textContent = `${TEAM[winner].name} ${localized('KAZANDI', 'WON')}`;
+  winnerTitle.style.color = winner === 'red' ? '#ff5175' : '#55c8ff';
+  winnerReason.textContent = `${t(won ? 'end.winMessage' : 'end.loseMessage')} ${t('end.territoryReason')}`;
+  document.querySelector('#end-duration-value').textContent = formatElapsedTime(record.durationSeconds);
+  document.querySelector('#end-ended-at').textContent = formatMatchDate(record.endedAt);
+  document.querySelector('#end-winner-team').textContent = TEAM[winner].name;
+  document.querySelector('#end-forts').textContent = `${t('team.redLetter')} ${record.redForts} · ${t('team.blueLetter')} ${record.blueForts}`;
+  document.querySelector('#end-players').textContent = `${t('team.redLetter')} ${record.redPlayers} · ${t('team.blueLetter')} ${record.bluePlayers}`;
+  document.querySelector('#end-painted').textContent = `${Number(record.paintedPercent || 0).toFixed(1)}%`;
+  document.querySelector('#end-player-score').textContent = Math.round(Number(record.player?.score) || 0);
+  document.querySelector('#end-player-kills').textContent = Math.round(Number(record.player?.kills) || 0);
+  document.querySelector('#end-player-deaths').textContent = Math.round(Number(record.player?.deaths) || 0);
+  document.querySelector('#end-player-time').textContent = formatElapsedTime(record.player?.elapsedSeconds);
+  document.querySelector('#end-red-paint').textContent = `${Number(record.redPaint || 0).toFixed(1)}%`;
+  document.querySelector('#end-blue-paint').textContent = `${Number(record.bluePaint || 0).toFixed(1)}%`;
+  document.querySelector('#end-red-paint-fill').style.width = `${Math.max(0, Math.min(100, Number(record.redPaint) || 0))}%`;
+  document.querySelector('#end-blue-paint-fill').style.width = `${Math.max(0, Math.min(100, Number(record.bluePaint) || 0))}%`;
+  renderRecordedLeaderboard(document.querySelector('#end-leaderboard'), record.leaders);
+  drawRecordedMap(endMapCanvas, record);
+}
+
+function renderMatchDetails(record, requestedTeam = null) {
+  if (!record) return;
+  const winner = record.winner === 'blue' ? 'blue' : 'red';
+  const loser = winner === 'red' ? 'blue' : 'red';
+  const selectedTeam = requestedTeam === 'red' || requestedTeam === 'blue'
+    ? requestedTeam
+    : (matchDetailsScreen.dataset.historyTeam === 'red' || matchDetailsScreen.dataset.historyTeam === 'blue'
+        ? matchDetailsScreen.dataset.historyTeam
+        : winner);
+  matchDetailsScreen.dataset.historyTeam = selectedTeam;
+  const winnerTab = document.querySelector('#history-winner-tab');
+  const loserTab = document.querySelector('#history-loser-tab');
+  winnerTab.dataset.team = winner;
+  loserTab.dataset.team = loser;
+  winnerTab.querySelector('strong').textContent = TEAM[winner].name;
+  loserTab.querySelector('strong').textContent = TEAM[loser].name;
+  winnerTab.classList.toggle('active', selectedTeam === winner);
+  loserTab.classList.toggle('active', selectedTeam === loser);
+  winnerTab.setAttribute('aria-selected', String(selectedTeam === winner));
+  loserTab.setAttribute('aria-selected', String(selectedTeam === loser));
+  document.querySelector('#match-details-title').textContent = `${TEAM[winner].name} ${localized('KAZANDI', 'WON')}`;
+  document.querySelector('#history-detail-date').textContent = `${formatMatchDate(record.endedAt)} · ${formatElapsedTime(record.durationSeconds)}`;
+  const teamStats = record.teamStats || matchTeamStatistics(record.leaders || [], null, { red: record.redPlayers, blue: record.bluePlayers });
+  const selectedStats = teamStats[selectedTeam] || { players: 0, score: 0, kills: 0, deaths: 0, elapsedSeconds: 0 };
+  const selectedPaint = selectedTeam === 'red' ? record.redPaint : record.bluePaint;
+  const selectedForts = selectedTeam === 'red' ? record.redForts : record.blueForts;
+  document.querySelector('#history-detail-stats').innerHTML = `
+    <article><span>${selectedTeam === winner ? t('history.winnerTeam') : t('history.loserTeam')}</span><strong>${escapeHtml(TEAM[selectedTeam].name)}</strong></article>
+    <article><span>${t('end.painted')}</span><strong>${Number(selectedPaint || 0).toFixed(1)}%</strong></article>
+    <article><span>${t('end.forts')}</span><strong>${Math.max(0, Math.round(Number(selectedForts) || 0))}</strong></article>
+    <article><span>${t('end.players')}</span><strong>${Math.max(0, Math.round(Number(selectedStats.players) || 0))}</strong></article>
+    <article><span>${t('history.teamScore')}</span><strong>${Math.max(0, Math.round(Number(selectedStats.score) || 0))}</strong></article>
+    <article><span>${t('history.totalKills')}</span><strong>${Math.max(0, Math.round(Number(selectedStats.kills) || 0))}</strong></article>
+    <article><span>${t('history.totalDeaths')}</span><strong>${Math.max(0, Math.round(Number(selectedStats.deaths) || 0))}</strong></article>
+    <article><span>${t('history.totalTime')}</span><strong>${formatElapsedTime(selectedStats.elapsedSeconds)}</strong></article>`;
+  document.querySelector('#history-red-paint').textContent = `${t('team.redShort')} ${Number(record.redPaint || 0).toFixed(1)}%`;
+  document.querySelector('#history-blue-paint').textContent = `${t('team.blueShort')} ${Number(record.bluePaint || 0).toFixed(1)}%`;
+  document.querySelector('#history-red-paint-fill').style.width = `${Math.max(0, Math.min(100, Number(record.redPaint) || 0))}%`;
+  document.querySelector('#history-blue-paint-fill').style.width = `${Math.max(0, Math.min(100, Number(record.bluePaint) || 0))}%`;
+  renderRecordedLeaderboard(document.querySelector('#history-leaderboard'), (record.leaders || []).filter((player) => player.team === selectedTeam));
+  drawRecordedMap(historyMapCanvas, record);
+}
+
+function openMatchDetails(matchId) {
+  const record = matchHistory.find((item) => item.id === matchId);
+  if (!record) return;
+  matchDetailsScreen.dataset.matchId = record.id;
+  matchDetailsScreen.dataset.historyTeam = record.winner === 'blue' ? 'blue' : 'red';
+  renderMatchDetails(record, matchDetailsScreen.dataset.historyTeam);
+  matchDetailsScreen.classList.remove('hidden');
+}
+
 function qualityLabel(tier) {
   const key = tier === 'performance' ? 'quality.low' : tier === 'balanced' ? 'quality.medium' : tier === 'high' ? 'quality.high' : 'quality.ultra';
   return t(key);
@@ -961,6 +1295,14 @@ function applyLanguage(language) {
   fortData.forEach((fort) => { fort.name = currentLanguage === 'tr' ? `${fort.team === 'red' ? 'Kırmızı' : 'Mavi'} Karakol ${fort.index}` : `${fort.team === 'red' ? 'Red' : 'Blue'} Fort ${fort.index}`; });
   updateCareerUI();
   updateWeaponUI();
+  renderMatchHistory();
+  updateWorldAgeDisplay(true);
+  if (activeMatchResult) renderEndScreen(activeMatchResult);
+  const detailId = matchDetailsScreen.dataset.matchId;
+  if (detailId && !matchDetailsScreen.classList.contains('hidden')) {
+    const detailRecord = matchHistory.find((item) => item.id === detailId);
+    if (detailRecord) renderMatchDetails(detailRecord);
+  }
   if (state.spawnSelecting) updateSpawnSelectionCopy();
   if (teamBadge && state.started && state.team) teamBadge.innerHTML = `${flagMarkup(state.countryCode)} ${escapeHtml(state.playerName)} · ${TEAM[state.team].name}`;
 }
@@ -1271,15 +1613,7 @@ function updateWorldLod(delta, force = false) {
     const dx = center.x - camera.position.x;
     const dz = center.z - camera.position.z;
     const centerDistance = Math.hypot(dx, dz);
-    if (entry.category === 'grassProxy') {
-      const nearestDistance = Math.max(0, centerDistance - radius);
-      const proxyStart = activeTier === 'performance' ? 135 : activeTier === 'balanced' ? 175 : activeTier === 'high' ? 215 : 255;
-      const fadeIn = THREE.MathUtils.smoothstep(nearestDistance, proxyStart, proxyStart + 72);
-      const fadeOut = 1 - THREE.MathUtils.smoothstep(nearestDistance, activeProfile.far - 95, activeProfile.far - 18);
-      const opacity = fadeIn * fadeOut * 0.92;
-      entry.object.material.opacity = opacity;
-      entry.object.visible = opacity > 0.025;
-    } else if (entry.category === 'grass') {
+    if (entry.category === 'grass') {
       const isTallCover = entry.object.userData.grassKind === 'tall';
       const baseGrassDistance = isTallCover
         ? activeProfile.far - 18
@@ -1451,9 +1785,18 @@ function addMesh(geometry, material, position, options = {}) {
   mesh.castShadow = options.castShadow ?? true;
   mesh.receiveShadow = options.receiveShadow ?? true;
   mesh.userData.paintable = options.paintable === true;
+  mesh.userData.wasteCollision = options.wasteCollision !== false;
+  mesh.userData.wasteSurfaceKind = options.blocker?.kind || (options.paintable ? 'ground' : 'solid');
   scene.add(mesh);
   if (options.paintable === true) paintables.push(mesh);
+  if (mesh.userData.wasteCollision) wasteSolidSourceCount += 1;
   if (options.merge !== false) staticMeshes.push(mesh);
+  else if (mesh.userData.wasteCollision) {
+    // Flags, signs and other deliberately unmerged meshes never pass through
+    // mergeStaticWorld(), so register their real geometry immediately.
+    bulletSurfaces.push(mesh);
+    wasteSolidCoveredSourceCount += 1;
+  }
   if (options.blocker) {
     const { x, z, y = 100 } = options.blocker;
     mesh.updateMatrixWorld(true);
@@ -1555,6 +1898,7 @@ function mergeStaticWorld() {
   for (const meshes of groups.values()) {
     if (meshes.length < 2) {
       bulletSurfaces.push(meshes[0]);
+      wasteSolidCoveredSourceCount += meshes[0].userData.wasteCollision ? 1 : 0;
       registerWorldLod(meshes[0]);
       continue;
     }
@@ -1571,9 +1915,13 @@ function mergeStaticWorld() {
     const merged = new THREE.Mesh(geometry, meshes[0].material);
     merged.castShadow = meshes.some((mesh) => mesh.castShadow);
     merged.receiveShadow = meshes.some((mesh) => mesh.receiveShadow);
+    merged.userData.paintable = meshes[0].userData.paintable === true;
+    merged.userData.wasteCollision = true;
+    merged.userData.wasteSurfaceKind = meshes[0].userData.wasteSurfaceKind || 'solid';
     scene.add(merged);
     registerWorldLod(merged);
     bulletSurfaces.push(merged);
+    wasteSolidCoveredSourceCount += meshes.filter((mesh) => mesh.userData.wasteCollision).length;
 
     const meshSet = new Set(meshes);
     for (let index = paintables.length - 1; index >= 0; index -= 1) {
@@ -2315,49 +2663,10 @@ function createGrassField() {
   sceneryMetrics.tallGrass = tallPlaced;
   buildChunks(tallGrassChunks, tallGeometry, tallMaterial, 'tall');
 
-  // Tek tek yapraklar uzakta piksel altına düştüğünde saklanma örtüsünü koruyan düzensiz dış silüet.
-  const proxySegments = 20;
-  const proxyPositions = [];
-  const proxyIndices = [];
-  for (let segment = 0; segment <= proxySegments; segment += 1) {
-    const angle = segment / proxySegments * Math.PI * 2;
-    const radius = 1 + Math.sin(segment * 2.37) * 0.075 + Math.cos(segment * 1.43) * 0.045;
-    const top = 0.78 + Math.sin(segment * 3.11) * 0.13 + Math.cos(segment * 1.77) * 0.075;
-    proxyPositions.push(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-    proxyPositions.push(Math.cos(angle) * radius * 0.96, top, Math.sin(angle) * radius * 0.96);
-    if (segment < proxySegments) {
-      const base = segment * 2;
-      proxyIndices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
-    }
-  }
-  const proxyGeometry = new THREE.BufferGeometry();
-  proxyGeometry.setAttribute('position', new THREE.Float32BufferAttribute(proxyPositions, 3));
-  proxyGeometry.setIndex(proxyIndices);
-  proxyGeometry.computeVertexNormals();
-  proxyGeometry.computeBoundingSphere();
-  const proxyBaseMaterial = activeTier === 'performance'
-    ? new THREE.MeshBasicMaterial({ color: 0x376f38, side: THREE.DoubleSide })
-    : new THREE.MeshLambertMaterial({ color: 0x3e783d, emissive: 0x071207, side: THREE.DoubleSide });
-  proxyBaseMaterial.alphaHash = true;
-  proxyBaseMaterial.depthWrite = true;
-  for (let index = 0; index < tallGrassPatches.length; index += 1) {
-    const patch = tallGrassPatches[index];
-    const proxyMaterial = proxyBaseMaterial.clone();
-    proxyMaterial.alphaHash = true;
-    proxyMaterial.opacity = 0;
-    const proxy = new THREE.Mesh(proxyGeometry, proxyMaterial);
-    const height = 6.35 + index % 5 * 0.24;
-    proxy.position.set(patch.x, terrainHeightAt(patch.x, patch.z) + 0.015, patch.z);
-    proxy.rotation.y = index * 0.61;
-    proxy.scale.set(patch.radius * 0.96, height, patch.radius * 0.96);
-    proxy.castShadow = false;
-    proxy.receiveShadow = false;
-    proxy.visible = false;
-    proxy.updateMatrixWorld(true);
-    scene.add(proxy);
-    registerWorldLod(proxy, 'grassProxy');
-  }
-  sceneryMetrics.grassProxies = tallGrassPatches.length;
+  // Do not replace distant grass with large opaque shells. Those shells cut
+  // across slopes like floating green plates in scoped views. The instanced
+  // blade chunks already have distance fading and preserve the grass silhouette.
+  sceneryMetrics.grassProxies = 0;
 }
 
 function createCoverAndScenery() {
@@ -3764,24 +4073,106 @@ function cameraRay(spreadX = 0, spreadY = 0) {
   return rayDirection;
 }
 
+function nearestWasteSurface(origin, direction, distance) {
+  raycaster.set(origin, direction);
+  raycaster.far = distance;
+  const staticHit = raycaster.intersectObjects(bulletSurfaces, false)[0] || null;
+  const characterHit = combatTargets.length
+    ? raycaster.intersectObjects(combatTargets, false)[0] || null
+    : null;
+  const segmentEnd = origin.clone().addScaledVector(direction, distance);
+  // Passing null as attackerTeam intentionally includes both teams. Waste is
+  // non-damaging paint, but every visible body is still a physical surface.
+  const remoteHit = massArmy?.raycastSegment(origin, segmentEnd, null, 1.08) || null;
+
+  let closest = null;
+  let closestDistanceSquared = Infinity;
+  for (const candidate of [staticHit, characterHit, remoteHit]) {
+    if (!candidate?.point) continue;
+    const candidateDistanceSquared = origin.distanceToSquared(candidate.point);
+    if (candidateDistanceSquared >= closestDistanceSquared) continue;
+    closestDistanceSquared = candidateDistanceSquared;
+    closest = candidate;
+  }
+  if (!closest) return null;
+
+  const object = closest.object || closest.hit?.object || null;
+  const normal = closest.normal
+    ? closest.normal.clone().normalize()
+    : closest.face.normal.clone().transformDirection(object.matrixWorld).normalize();
+  if (normal.dot(direction) > 0) normal.negate();
+  const ground = object === groundMesh || object?.userData.paintable === true;
+  return {
+    point: closest.point.clone(),
+    normal,
+    object,
+    ground,
+    surface: ground
+      ? 'ground'
+      : closest.massIndex != null || object?.userData.bot
+        ? 'player'
+        : object?.userData.wasteSurfaceKind || 'solid',
+  };
+}
+
 function tracePaintPath(origin, direction, maxDistance = 180, maxBounces = 2) {
   let remaining = maxDistance;
   const currentOrigin = origin.clone();
   const currentDirection = direction.clone().normalize();
   const path = [];
+  const bounces = [];
   for (let bounce = 0; bounce <= maxBounces && remaining > 0.1; bounce += 1) {
-    raycaster.set(currentOrigin, currentDirection);
-    raycaster.far = remaining;
-    const hit = raycaster.intersectObjects(bulletSurfaces, false)[0];
-    if (!hit) return { hit: null, normal: null, path, escaped: currentOrigin.clone().addScaledVector(currentDirection, remaining) };
-    const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
-    path.push(hit.point.clone());
-    remaining -= currentOrigin.distanceTo(hit.point);
-    if (hit.object === groundMesh || hit.object.userData.paintable) return { hit, normal, path };
-    currentOrigin.copy(hit.point).addScaledVector(normal, 0.08);
-    currentDirection.reflect(normal).normalize();
+    const contact = nearestWasteSurface(currentOrigin, currentDirection, remaining);
+    if (!contact) return {
+      hit: null,
+      normal: null,
+      path,
+      bounces,
+      escaped: currentOrigin.clone().addScaledVector(currentDirection, remaining),
+    };
+    const { normal } = contact;
+    path.push(contact.point.clone());
+    remaining -= currentOrigin.distanceTo(contact.point);
+    if (contact.ground) return {
+      hit: { point: contact.point, object: contact.object },
+      normal,
+      path,
+      bounces,
+    };
+    if (bounce >= maxBounces) return { hit: null, normal: null, path, bounces, escaped: contact.point.clone() };
+
+    const incoming = currentDirection.clone();
+    currentDirection.reflect(normal);
+    // Every solid impact loses range and gains a small downward component.
+    // This gives liquid/heavy waste a readable, stable ricochet instead of an
+    // endless laser-like reflection while keeping the collision deterministic.
+    const energyRetention = 0.82;
+    remaining *= energyRetention;
+    currentDirection.y -= 0.035 * (bounce + 1);
+    currentDirection.normalize();
+    bounces.push({
+      point: contact.point.clone(),
+      normal: normal.clone(),
+      incoming,
+      outgoing: currentDirection.clone(),
+      surface: contact.surface,
+    });
+    // Move outside the contacted plane by a scale-independent skin distance,
+    // preventing the next ray from immediately re-hitting the same triangle.
+    currentOrigin.copy(contact.point).addScaledVector(normal, 0.12).addScaledVector(currentDirection, 0.025);
   }
-  return { hit: null, normal: null, path };
+  return { hit: null, normal: null, path, bounces };
+}
+
+function wasteLaunchDirection(start, aimResult) {
+  // The first contact is authoritative. Aiming directly at the final ground
+  // point erases the already calculated wall/tree/rock ricochet whenever the
+  // emission point differs from the camera position.
+  const firstContact = aimResult?.path?.[0] || aimResult?.hit?.point;
+  if (firstContact && firstContact.distanceToSquared(start) > 0.0001) {
+    return firstContact.clone().sub(start).normalize();
+  }
+  return cameraRay(0, 0).clone();
 }
 
 function rayFromCameraToGround(spreadX = 0, spreadY = 0, maxDistance = 180) {
@@ -4320,10 +4711,8 @@ function performPee(aimResult = state.paintTarget) {
   state.actionDuration = 0.34;
   state.actionKind = 'pee';
   const start = getEmissionStart('pee');
-  const direction = aimResult?.hit
-    ? aimResult.hit.point.clone().sub(start).normalize()
-    : cameraRay(0, 0).clone();
-  const result = tracePaintPath(start, direction, WASTE_RANGE.pee, 2);
+  const direction = wasteLaunchDirection(start, aimResult);
+  const result = tracePaintPath(start, direction, WASTE_RANGE.pee, 4);
   if (state.soundCooldown <= 0) {
     playActionSound('pee');
     state.soundCooldown = 0.16;
@@ -4376,7 +4765,8 @@ function performPee(aimResult = state.paintTarget) {
 
   // Each hard-surface ricochet throws a few droplets onto the ground below.
   // Those droplets are real territory stamps as well as visible particles.
-  for (const bouncePoint of result.path.slice(0, -1)) {
+  for (const bounce of result.bounces) {
+    const bouncePoint = bounce.point;
     for (let droplet = 0; droplet < 2; droplet += 1) {
       const landing = groundSurfaceAt(
         bouncePoint.x + THREE.MathUtils.randFloatSpread(1.4),
@@ -4410,15 +4800,13 @@ function performVomit(aimResult = state.paintTarget) {
   ];
   let paintBroadcast = true;
   for (let i = 0; i < globCount; i += 1) {
-    const direction = aimResult?.hit
-      ? aimResult.hit.point.clone().sub(start).normalize()
-      : cameraRay(0, 0).clone();
+    const direction = wasteLaunchDirection(start, aimResult);
     direction.add(new THREE.Vector3(
       THREE.MathUtils.randFloatSpread(0.14),
       THREE.MathUtils.randFloatSpread(0.09),
       THREE.MathUtils.randFloatSpread(0.14),
     )).normalize();
-    const result = tracePaintPath(start, direction, WASTE_RANGE.vomit, 1);
+    const result = tracePaintPath(start, direction, WASTE_RANGE.vomit, 3);
     if (result.hit) {
       placeWastePaint(
         result.hit.point,
@@ -4464,10 +4852,11 @@ function performPoop(aimResult = state.paintTarget) {
   state.actionKind = 'poop';
   const position = getEmissionStart('poop');
   let velocity;
-  if (aimResult?.hit && !state.thirdPerson) {
-    const distance = position.distanceTo(aimResult.hit.point);
+  if ((aimResult?.hit || aimResult?.path?.length) && !state.thirdPerson) {
+    const firstContact = aimResult.path?.[0] || aimResult.hit.point;
+    const distance = position.distanceTo(firstContact);
     const flightTime = THREE.MathUtils.clamp(distance / 26, 0.38, 1.5);
-    velocity = aimResult.hit.point.clone().sub(position).divideScalar(flightTime);
+    velocity = firstContact.clone().sub(position).divideScalar(flightTime);
     velocity.y += 9.5 * flightTime;
   } else {
     const direction = state.thirdPerson
@@ -4630,19 +5019,17 @@ function impactBullet(result) {
 }
 
 function testPoopCollision(previous, current, life) {
-    const travel = current.clone().sub(previous);
-    raycaster.set(previous, travel.clone().normalize());
-    raycaster.far = travel.length() + 0.2;
-    const hit = raycaster.intersectObjects(bulletSurfaces, false)[0];
-    const floor = terrainHeightAt(current.x, current.z);
-    if (hit) {
-      const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-      return { point: hit.point, normal, bounce: hit.object !== groundMesh && !hit.object.userData.paintable };
-    }
-    if (current.y <= floor + 0.15 || life <= 0) {
-      return { point: new THREE.Vector3(current.x, floor + 0.04, current.z), normal: new THREE.Vector3(0, 1, 0) };
-    }
-    return null;
+  const travel = current.clone().sub(previous);
+  if (travel.lengthSq() < 0.000001) return null;
+  const contact = nearestWasteSurface(previous, travel.clone().normalize(), travel.length() + 0.2);
+  const floor = terrainHeightAt(current.x, current.z);
+  if (contact) {
+    return { point: contact.point, normal: contact.normal, bounce: !contact.ground, surface: contact.surface };
+  }
+  if (current.y <= floor + 0.15 || life <= 0) {
+    return { point: new THREE.Vector3(current.x, floor + 0.04, current.z), normal: new THREE.Vector3(0, 1, 0) };
+  }
+  return null;
 }
 
 function updateEffects(delta) {
@@ -5429,6 +5816,7 @@ function handleNetworkGameEvent(event) {
 }
 
 function handleNetworkWorldState(message) {
+  acceptWorldStartedAt(message.worldStartedAt, message.serverTime);
   if (Array.isArray(message.paint)) {
     for (const paintEvent of message.paint) handleNetworkGameEvent(paintEvent);
   }
@@ -5442,18 +5830,16 @@ function handleNetworkWorldState(message) {
   lastNetworkEventId = Math.max(lastNetworkEventId, Math.round(Number(message.eventSequence) || 0));
 }
 
-function endMatch(team, reason) {
+function endMatch(team, reasonKey = 'territory', { persist = true } = {}) {
   if (state.matchEnded) return;
   state.matchEnded = true;
   state.mouseLeft = false;
   state.mouseRight = false;
   state.shieldActive = false;
   document.exitPointerLock?.();
-  winnerTitle.textContent = `${TEAM[team].name} ${localized('KAZANDI', 'WON')}`;
-  winnerTitle.style.color = `#${new THREE.Color(TEAM[team].color).getHexString()}`;
-  winnerReason.textContent = currentLanguage === 'tr'
-    ? `${reason} · Puanın ${Math.round(state.score)} · ${state.kills} düşürme`
-    : `${reason} · Score ${Math.round(state.score)} · ${state.kills} kills`;
+  activeMatchResult = createMatchRecord(team, reasonKey);
+  if (persist) persistMatchRecord(activeMatchResult);
+  renderEndScreen(activeMatchResult);
   endScreen.classList.remove('hidden');
   showBattleEvent(localized('SAVAŞ SONA ERDİ', 'BATTLE ENDED'), `${TEAM[team].name} ${localized('kazandı.', 'won.')}`, team);
 }
@@ -5496,7 +5882,7 @@ function updateFortControl(delta) {
     }
   }
 
-  if (territoryCounts[0] <= 0) endMatch(territoryCounts[1] >= territoryCounts[2] ? 'red' : 'blue', localized('Adanın tamamı boyandı', 'The entire island was painted'));
+  if (territoryCounts[0] <= 0) endMatch(territoryCounts[1] >= territoryCounts[2] ? 'red' : 'blue', 'territory');
 }
 
 function selectWeapon(index, announce = true) {
@@ -5589,6 +5975,7 @@ function startGame(team) {
   enforcePlayerNameLimit();
   state.started = true;
   state.matchEnded = false;
+  activeMatchResult = null;
   state.dead = false;
   state.respawnTimer = 0;
   state.health = 100;
@@ -5652,8 +6039,11 @@ function returnToTeamSelection() {
   bigMapTitle.textContent = t('hud.fieldMap');
   document.exitPointerLock?.();
   pauseScreen.classList.add('hidden');
+  endScreen.classList.add('hidden');
+  matchDetailsScreen.classList.add('hidden');
   hud.classList.add('hidden');
   teamScreen.classList.remove('hidden');
+  renderMatchHistory();
 }
 
 function selectTeamChoice(team) {
@@ -5666,6 +6056,21 @@ document.querySelector('#choose-red').addEventListener('click', () => selectTeam
 document.querySelector('#choose-blue').addEventListener('click', () => selectTeamChoice('blue'));
 joinGameButton.addEventListener('click', () => startGame(state.selectedTeam));
 document.querySelector('#restart-button').addEventListener('click', () => location.reload());
+document.querySelector('#end-home-button').addEventListener('click', returnToTeamSelection);
+document.querySelector('#close-match-details').addEventListener('click', () => {
+  matchDetailsScreen.classList.add('hidden');
+  delete matchDetailsScreen.dataset.matchId;
+});
+matchHistoryList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-match-id]');
+  if (button) openMatchDetails(button.dataset.matchId);
+});
+document.querySelector('#history-team-tabs').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-team]');
+  if (!button) return;
+  const record = matchHistory.find((item) => item.id === matchDetailsScreen.dataset.matchId);
+  if (record) renderMatchDetails(record, button.dataset.team);
+});
 document.querySelector('#resume-button').addEventListener('click', () => renderer.domElement.requestPointerLock());
 document.querySelector('#change-team-button').addEventListener('click', returnToTeamSelection);
 document.querySelector('#team-settings-button').addEventListener('click', () => openSettings('team'));
@@ -5996,6 +6401,7 @@ function animate() {
     healthFill.style.background = state.health > 55 ? '#79e386' : state.health > 25 ? '#f5d45b' : '#ff315e';
     updateWeaponUI();
     updateCareerUI();
+    updateWorldAgeDisplay();
     state.uiTimer = 0;
   }
   if (state.locationTimer >= 0.28) {
@@ -6050,7 +6456,8 @@ massArmy = new MassArmySystem(scene, {
   worldHalfDepth: WORLD.halfDepth,
 });
   multiplayer = new MultiplayerClient({
-    onSnapshot: (players) => {
+    onSnapshot: (players, message) => {
+      acceptWorldStartedAt(message?.worldStartedAt, message?.serverTime);
       if (state.started) massArmy.syncRemotePlayers(players, multiplayer.clientId);
       updateTeamCounts();
       // Networked score/kills/deaths and team totals must be visible in the same
@@ -6061,7 +6468,9 @@ massArmy = new MassArmySystem(scene, {
     onEvent: handleNetworkGameEvent,
     onWorldState: handleNetworkWorldState,
   onRejected: () => blockDuplicateSession(),
-  onWelcome: ({ team }) => {
+  onWelcome: (message) => {
+    const { team } = message;
+    acceptWorldStartedAt(message.worldStartedAt, message.serverTime);
     updateTeamCounts();
     if (!state.started || team === state.team) return;
     applyPlayerTeam(team);
@@ -6143,6 +6552,53 @@ function findRockPassageForStance(stanceName = 'stand') {
 }
 
 globalThis.__bibishDebug = {
+  previewWorldAge: (seconds = 0) => {
+    worldStartedAt = worldClockNow() - Math.max(0, Number(seconds) || 0) * 1000;
+    updateWorldAgeDisplay(true);
+    return worldAgeValue.textContent;
+  },
+  previewMatchEnd: (winner = 'red', playerTeam = winner, persist = true) => {
+    const safeWinner = winner === 'blue' ? 'blue' : 'red';
+    const safePlayerTeam = playerTeam === 'blue' ? 'blue' : 'red';
+    state.started = true;
+    state.matchEnded = false;
+    state.playerName = sanitizePlayerName(playerNameInput.value) || 'Bibishçi';
+    applyPlayerTeam(safePlayerTeam);
+    state.score = Math.max(state.score, 2840);
+    state.kills = Math.max(state.kills, 18);
+    state.deaths = Math.max(state.deaths, 6);
+    state.elapsedSeconds = Math.max(state.elapsedSeconds, 4872);
+    worldStartedAt = worldClockNow() - 4872 * 1000;
+    endMatch(safeWinner, 'territory', { persist: false });
+    Object.assign(activeMatchResult, safeWinner === 'red'
+      ? { redPaint: 63.4, bluePaint: 36.6, paintedPercent: 100, redForts: 7, blueForts: 3, redPlayers: 24, bluePlayers: 23 }
+      : { redPaint: 42.1, bluePaint: 57.9, paintedPercent: 100, redForts: 4, blueForts: 6, redPlayers: 22, bluePlayers: 24 });
+    const preview = activeMatchResult.territoryPreview;
+    if (preview?.cells) {
+      const boundary = safeWinner === 'red' ? 0.63 : 0.42;
+      preview.cells = [...preview.cells].map((cell, index) => {
+        if (cell === '3') return cell;
+        const x = index % preview.size;
+        const y = Math.floor(index / preview.size);
+        return y / preview.size < boundary + Math.sin(x * 0.42) * 0.075 ? '1' : '2';
+      }).join('');
+    }
+    const samplePlayers = [
+      ['KızılKaptan', 'red', 'TR', 2310, 15, 7], ['MaviFırtına', 'blue', 'GB', 2145, 14, 8],
+      ['SalçaBey', 'red', 'MX', 1870, 11, 9], ['Lacivert', 'blue', 'FR', 1650, 10, 10],
+      ['AcıBiber', 'red', 'JP', 1420, 9, 11], ['Dalga', 'blue', 'BR', 1310, 8, 12],
+    ];
+    activeMatchResult.leaders = [activeMatchResult.leaders[0], ...samplePlayers.map(([name, team, countryCode, score, kills, deaths], index) => ({
+      id: `preview-${index}`, name, team, countryCode, score, kills, deaths, elapsedSeconds: 4200 - index * 217,
+    }))].sort((a, b) => b.score - a.score);
+    activeMatchResult.teamStats = matchTeamStatistics(activeMatchResult.leaders, null, {
+      red: activeMatchResult.redPlayers,
+      blue: activeMatchResult.bluePlayers,
+    });
+    if (persist) persistMatchRecord(activeMatchResult);
+    renderEndScreen(activeMatchResult);
+    return activeMatchResult;
+  },
   joinLoadTest: (team = 'red', index = 0) => {
     const safeTeam = team === 'blue' ? 'blue' : 'red';
     playerNameInput.value = `Load-${safeTeam === 'red' ? 'R' : 'B'}-${String(index).padStart(3, '0')}`;
@@ -6269,11 +6725,12 @@ globalThis.__bibishDebug = {
       far: camera.far,
     };
   },
-  setGrassViewTest: (distance = 560, aiming = false, zoom = 10) => {
+  setGrassViewTest: (distance = 560, aiming = false, zoom = 10, lateral = 0, elevation = 0) => {
     const meadow = biomeLayout.find((biome) => biome.variant === 'elephantGrass');
     if (!meadow) return null;
     const targetZ = THREE.MathUtils.clamp(meadow.z + Number(distance), -WORLD.halfDepth + 35, WORLD.halfDepth - 35);
-    playerPosition.set(meadow.x, floorHeightAt(meadow.x, targetZ), targetZ);
+    const targetX = THREE.MathUtils.clamp(meadow.x + Number(lateral), -WORLD.halfWidth + 35, WORLD.halfWidth - 35);
+    playerPosition.set(targetX, floorHeightAt(targetX, targetZ) + Math.max(0, Number(elevation) || 0), targetZ);
     state.feetY = playerPosition.y;
     state.thirdPerson = false;
     state.mode = 0;
@@ -6284,11 +6741,18 @@ globalThis.__bibishDebug = {
     state.scopeZoom = THREE.MathUtils.clamp(Number(zoom) || 2.4, 2.4, 10);
     state.scopeLodBlend = state.aiming ? 1 : 0;
     camera.position.set(playerPosition.x, state.feetY + PLAYER.eyeHeight, playerPosition.z);
-    camera.lookAt(meadow.x, terrainHeightAt(meadow.x, meadow.z) + 1.3, meadow.z);
-    state.pitch = camera.rotation.x;
-    state.yaw = camera.rotation.y;
+    const focus = new THREE.Vector3(meadow.x, terrainHeightAt(meadow.x, meadow.z) + 3.2, meadow.z);
+    const viewDirection = focus.sub(camera.position).normalize();
+    state.pitch = Math.asin(THREE.MathUtils.clamp(viewDirection.y, -1, 1));
+    state.yaw = Math.atan2(-viewDirection.x, -viewDirection.z);
+    camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
     updateWorldLod(1, true);
-    return { distance: Math.hypot(playerPosition.x - meadow.x, playerPosition.z - meadow.z), ...globalThis.__bibishDebug.getGrassLodMetrics() };
+    return {
+      distance: Math.hypot(playerPosition.x - meadow.x, playerPosition.z - meadow.z),
+      lateral: Number(lateral) || 0,
+      elevation: Math.max(0, Number(elevation) || 0),
+      ...globalThis.__bibishDebug.getGrassLodMetrics(),
+    };
   },
   getGameplayConfig: () => ({
     npcPlayerCombatEnabled: false,
@@ -6718,11 +7182,40 @@ globalThis.__bibishDebug = {
     elevatedVolumes: blockers.filter((box) => !box.terrainGrounded).length,
     invalidVolumes: blockers.filter((box) => box.minX >= box.maxX || box.minY >= box.maxY || box.minZ >= box.maxZ || box.polygon?.length < 3).length,
     bulletSurfaces: bulletSurfaces.length,
+    wasteSolidSources: wasteSolidSourceCount,
+    wasteSolidCoveredSources: wasteSolidCoveredSourceCount,
+    wasteSolidMissingSources: Math.max(0, wasteSolidSourceCount - wasteSolidCoveredSourceCount),
     gridCells: blockerGrid.size,
     sweptStep: Math.max(0.065, state.currentRadius * 0.28),
     stanceRadii: Object.fromEntries(Object.entries(STANCE).map(([name, profile]) => [name, profile.radius])),
     recoveries: state.collisionRecoveries,
   }),
+  auditWasteRicochetSystem: (fortIndex = 0) => {
+    const fort = fortData[fortIndex];
+    if (!fort) return null;
+    const backZ = fort.z - fort.gateSide * fort.half;
+    const origin = new THREE.Vector3(fort.x + 7, fort.y + 4.6, fort.z - fort.gateSide * 10);
+    const wallTarget = new THREE.Vector3(fort.x + 7, fort.y + 2.1, backZ);
+    const direction = wallTarget.clone().sub(origin).normalize();
+    const traced = tracePaintPath(origin, direction, 95, 4);
+    const collisionEnd = origin.clone().addScaledVector(direction, origin.distanceTo(wallTarget) + fort.wallThickness + 1);
+    const poopHit = testPoopCollision(origin, collisionEnd, 5);
+    return {
+      sourceMeshes: wasteSolidSourceCount,
+      coveredSourceMeshes: wasteSolidCoveredSourceCount,
+      missingSourceMeshes: Math.max(0, wasteSolidSourceCount - wasteSolidCoveredSourceCount),
+      unmergedFlagRegistered: bulletSurfaces.includes(fort.flag),
+      liquidBounceCount: traced.bounces.length,
+      liquidReachedGround: traced.hit?.object === groundMesh || traced.hit?.object?.userData.paintable === true,
+      firstBounceSurface: traced.bounces[0]?.surface || null,
+      reflectedAwayFromSurface: traced.bounces[0]
+        ? traced.bounces[0].outgoing.dot(traced.bounces[0].normal) > 0
+        : false,
+      poopBouncesFromWall: poopHit?.bounce === true,
+      poopNormalFacesIncoming: poopHit ? poopHit.normal.dot(direction) <= 0 : false,
+      path: traced.path.map((point) => point.toArray()),
+    };
+  },
   getPlayerBlockState: () => ({
     static: collidesStaticAt(playerPosition.x, playerPosition.z, state.currentRadius),
     detailedNpc: bots.some((bot) => !bot.dead && Math.hypot(playerPosition.x - bot.group.position.x, playerPosition.z - bot.group.position.z) < state.currentRadius + 0.31),
@@ -7052,4 +7545,10 @@ setLoadingProgress(100, localized('Saha hazır. Kayıtlı kariyerin yüklendi.',
 await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 loadingScreen.setAttribute('aria-busy', 'false');
 loadingScreen.classList.add('hidden');
+const localPreviewQuery = new URLSearchParams(window.location.search);
+if (['localhost', '127.0.0.1'].includes(window.location.hostname) && localPreviewQuery.has('endPreview')) {
+  const previewWinner = localPreviewQuery.get('endPreview') === 'blue' ? 'blue' : 'red';
+  const previewPlayerTeam = localPreviewQuery.get('playerTeam') === 'blue' ? 'blue' : 'red';
+  requestAnimationFrame(() => globalThis.__bibishDebug.previewMatchEnd(previewWinner, previewPlayerTeam, true));
+}
 }

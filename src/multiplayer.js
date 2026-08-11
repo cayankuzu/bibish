@@ -80,9 +80,11 @@ export class MultiplayerClient {
     this.lastSnapshotAt = 0;
     this.serverPlayerCount = 0;
     this.serverTeamCounts = { red: 0, blue: 0 };
+    this.serverTeamStats = null;
     this.serverLeaderboard = [];
     this.roomId = null;
     this.serverInstanceId = null;
+    this.worldStartedAt = null;
   }
 
   connect(profile) {
@@ -149,7 +151,9 @@ export class MultiplayerClient {
         this.clientId = message.clientId || this.clientId;
         this.roomId = message.roomId || null;
         this.serverInstanceId = message.instanceId || null;
+        this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
         this.serverTeamCounts = message.counts || this.serverTeamCounts;
+        this.serverTeamStats = message.teamStats || this.serverTeamStats;
         this.serverPlayerCount = Math.max(0,
           (Number(this.serverTeamCounts.red) || 0) + (Number(this.serverTeamCounts.blue) || 0));
         this.onWelcome?.(message);
@@ -158,11 +162,14 @@ export class MultiplayerClient {
         this.lastSnapshotAt = performance.now();
         this.serverPlayerCount = Number(message.totalPlayers) || message.players.length;
         this.serverTeamCounts = message.counts || this.serverTeamCounts;
+        this.serverTeamStats = message.teamStats || this.serverTeamStats;
         this.serverLeaderboard = Array.isArray(message.leaders) ? message.leaders : this.serverLeaderboard;
+        this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
         this.onSnapshot?.(message.players, message);
       } else if (message.type === 'game-event' && message.event) {
         this.onEvent?.(message.event, message);
       } else if (message.type === 'world-state') {
+        this.worldStartedAt = Number(message.worldStartedAt) || this.worldStartedAt;
         this.onWorldState?.(message);
       } else if (message.type === 'pong') {
         this.latencyMs = Math.max(0, performance.now() - Number(message.sentAt || performance.now()));
@@ -233,8 +240,10 @@ export class MultiplayerClient {
       sentStates: this.sentStateCount,
       serverPlayerCount: this.serverPlayerCount,
       serverTeamCounts: { ...this.serverTeamCounts },
+      serverTeamStats: this.serverTeamStats,
       roomId: this.roomId,
       serverInstanceId: this.serverInstanceId,
+      worldStartedAt: this.worldStartedAt,
       deviceKey: this.deviceKey,
       lastSnapshotAgeMs: this.lastSnapshotAt ? Math.round(performance.now() - this.lastSnapshotAt) : null,
       url: websocketUrl(),

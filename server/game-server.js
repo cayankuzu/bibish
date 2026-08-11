@@ -3,6 +3,7 @@ import { existsSync, readFile, statSync } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { createGameRoom } from './game-room.js';
+import { loadPersistentLocalWorldStartedAt } from './local-world-clock.js';
 
 const port = Number(process.env.BIBISH_GAME_PORT || 8787);
 const host = process.env.BIBISH_GAME_HOST || '0.0.0.0';
@@ -20,7 +21,7 @@ const contentTypes = new Map([
   ['.ogg', 'audio/ogg'],
   ['.wasm', 'application/wasm'],
 ]);
-const room = createGameRoom();
+const room = createGameRoom({ worldStartedAt: loadPersistentLocalWorldStartedAt() });
 const server = createServer((request, response) => {
   if (request.url === '/health' || request.url === '/metrics') {
     response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });

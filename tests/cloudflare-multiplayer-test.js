@@ -91,7 +91,38 @@ try {
     if (offset + size < clientCount) await wait(rampDelayMs);
   }
   const populationDeadline = Date.now() + timeoutMs;
-  while (Date.now() < populationDeadline && !clients.every((client) => client.snapshot?.totalPlayers === clientCount)) await wait(100);
+  // Canlı doğrulama gerçek oyuncular çevrimiçiyken de çalışabilmeli. Test
+  // istemcilerinin tamamının odaya girdiğini doğrula, odanın yalnızca test
+  // istemcilerinden oluştuğunu varsayma.
+  while (Date.now() < populationDeadline && !clients.every((client) => client.snapshot?.totalPlayers >= clientCount)) await wait(100);
+  const clockAtJoin = Math.min(...clients.map((client) => Number(client.welcome.worldActiveElapsedMs)));
+  await wait(1100);
+  // Gerçek oyun istemcisi 15 Hz durum paketi yollar. Test oyuncuları da bir
+  // sonraki yetkili snapshot'ı tetiklesin ki sunucudaki saat ilerleyişini eski
+  // bir bağlantı snapshot'ıyla ölçmeyelim.
+  clients.forEach((client) => client.socket.send(JSON.stringify({
+    type: 'state',
+    x: client.index * 2 + 0.25,
+    y: 4,
+    z: client.index * 2,
+    yaw: 0,
+    pitch: 0,
+    stance: 'stand',
+    weapon: 0,
+    mode: 0,
+    health: 100,
+    score: client.index,
+    kills: 0,
+    deaths: 0,
+    elapsedSeconds: 2,
+    phase: 0,
+    action: 0,
+    dead: false,
+  })));
+  const clockDeadline = Date.now() + timeoutMs;
+  while (Date.now() < clockDeadline
+    && Math.max(...clients.map((client) => Number(client.snapshot.worldActiveElapsedMs))) - clockAtJoin < 900) await wait(50);
+  const clockAfterJoin = Math.max(...clients.map((client) => Number(client.snapshot.worldActiveElapsedMs)));
   const attacker = clients[0];
   const victim = clients.find((client) => client.welcome.team !== attacker.welcome.team);
   attacker.socket.send(JSON.stringify({
@@ -114,12 +145,16 @@ try {
     passed: roomIds.size === 1
       && roomIds.has('global')
       && instanceIds.size === 1
-      && clients.every((client) => client.snapshot.totalPlayers === clientCount)
+      && clients.every((client) => client.snapshot.totalPlayers >= clientCount)
       && Math.abs(counts.red - counts.blue) <= 1
       && clients.every((client) => client.worldState && Array.isArray(client.worldState.paint) && Array.isArray(client.worldState.forts))
       && clients.every((client) => client.events.some((event) => event.kind === 'paint'))
       && clients.every((client) => client.events.some((event) => event.kind === 'damage' && event.health === 62))
       && clients.every((client) => Array.isArray(client.snapshot.leaders) && client.snapshot.leaders.length > 0)
+      && clients.every((client) => client.welcome.worldClockRunning === true)
+      && Number.isFinite(clockAtJoin)
+      && Number.isFinite(clockAfterJoin)
+      && clockAfterJoin - clockAtJoin >= 900
       && clients.every((client) => client.errors.length === 0),
     endpoint,
     clients: clientCount,
@@ -130,6 +165,7 @@ try {
       minimum: Math.min(...clients.map((client) => client.snapshot.players.length)),
       maximum: Math.max(...clients.map((client) => client.snapshot.players.length)),
     },
+    worldClock: { atJoin: clockAtJoin, afterJoin: clockAfterJoin, running: true },
     sharedEvents: {
       recipients: clients.length,
       paintRecipients: clients.filter((client) => client.events.some((event) => event.kind === 'paint')).length,

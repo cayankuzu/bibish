@@ -926,6 +926,18 @@ function updateWorldAgeDisplay(force = false) {
   worldAgeValue.textContent = formatWorldAge(elapsed);
 }
 
+function startWorldClockOptimistically() {
+  if (worldClockRunning) return;
+  // Oyuna giriş tıklaması ile ağdaki welcome paketi arasında kısa bir pencere
+  // vardır. Ayrıca eski bir gerçek-zamanlı sunucu yeni saat alanlarını henüz
+  // göndermeyebilir. Her iki durumda da sayaç kullanıcı oyuna girdiği anda
+  // yürümeye başlar; ilk yetkili sunucu paketi değeri daha sonra kesinleştirir.
+  worldClockRunning = true;
+  worldClockSyncedAt = worldClockNow();
+  lastWorldAgeSecond = -1;
+  updateWorldAgeDisplay(true);
+}
+
 function acceptWorldClock(message = {}) {
   const timestamp = Number(message.worldStartedAt);
   const authoritativeNow = Number(message.serverTime);
@@ -5992,6 +6004,7 @@ function startGame(team) {
   savePlayerName(state.playerName);
   enforcePlayerNameLimit();
   state.started = true;
+  startWorldClockOptimistically();
   state.matchEnded = false;
   activeMatchResult = null;
   state.dead = false;

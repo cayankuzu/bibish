@@ -41,7 +41,10 @@ try {
   const initiallyPaused = await waitForMetrics((value) => value.players === 0 && value.worldClockRunning === false);
 
   await page.evaluate(() => globalThis.__bibishDebug.joinLoadTest('red', 707));
+  const visibleClockAtJoin = await page.locator('#world-age-value').textContent();
   const joined = await waitForMetrics((value) => value.players === 1 && value.worldClockRunning === true);
+  await page.waitForFunction((previous) => document.querySelector('#world-age-value')?.textContent !== previous, visibleClockAtJoin, { timeout: 5000 });
+  const visibleClockAfterJoin = await page.locator('#world-age-value').textContent();
   await new Promise((resolve) => setTimeout(resolve, 1150));
   const beforeRefresh = await metrics();
   if (beforeRefresh.worldActiveElapsedMs - joined.worldActiveElapsedMs < 900) {
@@ -87,6 +90,8 @@ try {
     pausedAfterRefresh: pausedAfterRefresh.worldActiveElapsedMs,
     resumed: resumed.worldActiveElapsedMs,
     browserState,
+    visibleClockAtJoin,
+    visibleClockAfterJoin,
   }));
 } finally {
   await context.close();
